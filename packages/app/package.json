@@ -1,0 +1,12 @@
+{
+  "name": "@melchior/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@melchior/core": "0.1.0",
+    "@melchior/data": "0.1.0",
+    "@melchior/ui": "0.1.0"
+  },
+  "license": "GPL-3.0-or-later"
+}

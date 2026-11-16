@@ -1,0 +1,22 @@
+{
+  "name": "melchior-shadow",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "dev": "vite packages/app",
+    "build": "tsc -b && vite build packages/app",
+    "scenari": "node -e \"for(let y=1990;y<=2026;y++)require('child_process').execFileSync('python3',['-I','tools/export_scenario.py',String(y)],{stdio:'inherit'})\""
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  },
+  "license": "GPL-3.0-or-later"
+}

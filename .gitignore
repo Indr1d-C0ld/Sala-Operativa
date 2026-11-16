@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Gioco originale e materiale derivato: solo per studio locale, mai pubblicati
+pre_assets/
+re/orig/
+re/work/
+re/ghidra/
+re/manual.txt
+re/sp_countries_1990.json
+
+# Fonti grezze (scaricabili: vedi data/README.md) e pacchetti rigenerabili
+data/sources/
+packages/app/public/scenarios/
+__pycache__/
