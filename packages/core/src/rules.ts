@@ -100,7 +100,11 @@ export interface Rules {
   ai: {
     /** Ogni quanti giorni gira il turno IA (non ricavato dall'originale: scelta di gioco). */
     turnEveryDays: number;
-    /** Per etica arrotondata 0–6: soglie cumulative (su 100) dei 5 gruppi di azioni. */
+    /**
+     * Per etica: soglie cumulative (su 100) dei 5 gruppi di azioni, 6 righe. L'originale usa
+     * la riga int(etica + 0,5), con l'etica 1–6; con `originalScales` falso la riga è
+     * spietatezza − 1 (0 scrupoloso … 5 spietato).
+     */
     groupByEthic: number[][];
     /** Per pace mondiale 1–6 e livello 1–7: colonna (1–6) della tabella dei pesi. */
     columnByPeace: number[][];
@@ -111,6 +115,11 @@ export interface Rules {
     /** Azioni "fuori tabella" se rand(1,7) < etica: livello > 4 / altrimenti. */
     rogueHostile: number[];
     rogueOther: number[];
+    /**
+     * Dado del ramo fuori tabella: ci si entra se rand(1, dado) < spietatezza. L'originale usa 7
+     * (fino a 5 volte su 7 per i paesi più spietati).
+     */
+    rogueDie: number;
     /**
      * L'IA dell'originale legge due scale al contrario rispetto al resto del gioco: usa il
      * livello di relazione (7 = alleato) come il "Country Interaction Mood" del manuale
@@ -125,6 +134,42 @@ export interface Rules {
      * dieci volte l'anno e in pochi anni azzerano l'economia mondiale.
      */
     nuclearOnlyAtWar: boolean;
+    /**
+     * ◇ Anche in guerra l'IA lancia per prima solo se il suo lato sta perdendo (forza < 50%),
+     * come nell'escalation del modulo guerra; altrimenti minaccia (allerta nucleare). Senza,
+     * le guerre fra potenze nucleari finiscono quasi sempre con più attacchi atomici.
+     */
+    nuclearOnlyWhenLosing: boolean;
+    /**
+     * ◇ Deterrenza: l'IA non invade un paese con un arsenale credibile (livello nucleare ≥ 4 e
+     * testate); al posto dell'invasione conduce esercitazioni militari al confine.
+     */
+    nuclearDeterrence: boolean;
+    /**
+     * ◇ L'IA non conduce attacchi chirurgici né invasioni contro un paese amico (relazione ≥ 5).
+     * Le tabelle dell'originale lasciano un po' di peso all'invasione anche nelle colonne miti,
+     * e i paesi europei finivano per annettersi fra loro.
+     */
+    friendlyRestraint: boolean;
+    /**
+     * ◇ Pace democratica: due paesi con queste ideologie non si attaccano né si invadono (vuoto:
+     * regola spenta). Le tabelle dell'originale non rendono amiche fra loro le democrazie
+     * (capitalismo e socialismo democratico sono neutrali), e senza questa regola Regno Unito,
+     * Germania o Turchia invadevano i vicini europei.
+     */
+    democraticPeace: string[];
+    /**
+     * ◇ Oltre i confini l'IA invade solo dove ha già truppe schierate vicino al bersaglio, come
+     * nell'originale che legge i contingenti TROOPS; la soglia `war.projectionShare` vale solo
+     * per il giocatore. Senza, la prima potenza militare dopo gli Stati Uniti conquista paesi in
+     * ogni continente.
+     */
+    projectionNeedsTroops: boolean;
+    /**
+     * ◇ L'allerta nucleare (l'atomica trattenuta da `nuclearOnlyAtWar` o `nuclearOnlyWhenLosing`)
+     * scatta solo se la relazione è al massimo questo livello; altrimenti l'azione cade (7: sempre).
+     */
+    nuclearAlertMaxRelation: number;
   };
 }
 

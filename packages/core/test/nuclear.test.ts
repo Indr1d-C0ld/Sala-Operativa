@@ -63,12 +63,35 @@ describe.skipIf(!existsSync(PACK))("armi nucleari", () => {
     expect(sim.queue.filter((e) => e.kind === "action" && e.actor === kn && e.target === us)).toHaveLength(3);
   });
 
-  it("fuori da una guerra l'IA minaccia invece di colpire", () => {
-    const w = fresh();
-    const sim = new Simulation({ world: w, rules, seed: 3, start: new Date(Date.UTC(2026, 0, 1)), player: idx(w, "US") });
-    sim.queue.push({ kind: "action", actor: idx(w, "CH"), target: idx(w, "JA"), code: 24, day: sim.day + 1, hour: 0 });
-    sim.advanceDay();
-    expect(sim.reports.some((r) => r.key === "nuclearAlert")).toBe(true);
-    expect(sim.reports.some((r) => r.key === "nuclearStrike")).toBe(false);
+  it("fuori da una guerra l'IA minaccia invece di colpire, e solo i nemici", () => {
+    const run = (maxRel: number) => {
+      const w = fresh();
+      const r = { ...rules, ai: { ...rules.ai, nuclearAlertMaxRelation: maxRel } };
+      const sim = new Simulation({ world: w, rules: r, seed: 3, start: new Date(Date.UTC(2026, 0, 1)), player: idx(w, "US") });
+      sim.queue.push({ kind: "action", actor: idx(w, "CH"), target: idx(w, "JA"), code: 24, day: sim.day + 1, hour: 0 });
+      sim.advanceDay();
+      return sim.reports.map((x) => x.key);
+    };
+    expect(run(7)).toContain("nuclearAlert");
+    expect(run(7)).not.toContain("nuclearStrike");
+    expect(run(1)).not.toContain("nuclearAlert");           // Cina e Giappone non sono nemici dichiarati
+  });
+
+  it("in guerra l'IA lancia per prima solo se sta perdendo", () => {
+    const strike = (strength: number) => {
+      const w = fresh();
+      const ch = idx(w, "CH");
+      const vm = idx(w, "VM");
+      const war = startWar(w, rules, ch, vm, 0);
+      war.sides[0].strength = strength;
+      // senza tick di guerra la forza resta quella impostata
+      const r = { ...rules, war: { ...rules.war, tickEveryDays: 997 } };
+      const sim = new Simulation({ world: w, rules: r, seed: 3, start: new Date(Date.UTC(2026, 0, 1)), player: idx(w, "US") });
+      sim.queue.push({ kind: "action", actor: ch, target: vm, code: 24, day: sim.day + 1, hour: 0 });
+      sim.advanceDay();
+      return sim.reports.some((x) => x.key === "nuclearStrike");
+    };
+    expect(strike(90)).toBe(false);
+    expect(strike(30)).toBe(true);
   });
 });

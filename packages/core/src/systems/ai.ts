@@ -16,7 +16,9 @@ import { relationLevel } from "./relation.js";
  * di ostilità, e con i pesi di BIGTABLE l'azione dentro il gruppo. L'azione si esegue dopo
  * rand(0,23) ore e rand(0,2) giorni.
  *
- * L'originale legge relazione ed etica al contrario (vedi `Rules.ai.originalScales`).
+ * L'originale legge relazione, etica e pace mondiale al contrario (vedi `Rules.ai.originalScales`).
+ * Le regole ◇ di `Rules.ai` (deterrenza, pace democratica, niente attacchi agli amici, invasioni
+ * oltremare solo con truppe, atomica solo da chi perde) vengono dalla taratura (docs/MODELLO.md).
  *
  * Dove il reverse engineering non è completo (marcato ◇): la scelta della regione nella fase 1
  * usa la pace regionale al posto di un valore per regione non identificato; il bersaglio dei
@@ -92,16 +94,22 @@ export function chooseAction(w: WorldState, rules: Rules, rng: Rng, actor: numbe
   const rel = relationLevel(w, rules, actor, target, rng.int(0, 3));
   const level = ai.originalScales ? rel : 8 - rel;            // 1 armonia … 7 inimicizia
   const ruthless = ai.originalScales ? A.ethic : 7 - A.ethic;  // 1 scrupoloso … 6 spietato
-  if (rng.int(1, 7) < ruthless) {
+  if (rng.int(1, ai.rogueDie) < ruthless) {
     // ramo "fuori tabella" (b442:1abe)
     const list = level > 4 ? ai.rogueHostile : ai.rogueOther;
     return list[rng.int(1, list.length) - 1];
   }
   const r1 = rng.int(1, 100);
-  const cumulative = ai.groupByEthic[Math.min(Math.max(Math.trunc(ruthless + 0.5), 0), ai.groupByEthic.length - 1)]!;
+  // l'originale indicizza con l'etica 1–6 una tabella di 6 righe (la 6 cade fuori): con le scale
+  // corrette la riga è spietatezza − 1, così ogni grado di etica ha la sua (◇)
+  const row = Math.trunc(ruthless + 0.5) - (ai.originalScales ? 0 : 1);
+  const cumulative = ai.groupByEthic[Math.min(Math.max(row, 0), ai.groupByEthic.length - 1)]!;
   let group = cumulative.findIndex((x) => x >= r1);
   if (group < 0) group = cumulative.length - 1;
-  const peace = Math.min(Math.max(Math.trunc(w.worldPeace + 0.5), 1), ai.columnByPeace.length);
+  // anche la pace mondiale è letta al contrario: nell'originale un mondo in pace (6) sceglie
+  // le colonne più ostili; con le scale corrette la riga è 7 − pace (◇)
+  const p0 = Math.min(Math.max(Math.trunc(w.worldPeace + 0.5), 1), ai.columnByPeace.length);
+  const peace = ai.originalScales ? p0 : ai.columnByPeace.length + 1 - p0;
   const column = ai.columnByPeace[peace - 1]![level - 1]! - 1;
   let r2 = rng.int(1, 100);
   for (let row = ai.groupStart[group]!; row < ai.weights.length; row++) {
@@ -136,6 +144,13 @@ export function adjustAction(w: WorldState, actor: number, target: number, code:
   return code;
 }
 
+/** ◇ L'IA non attacca né invade gli amici (relazione ≥ 5) e le democrazie non si combattono. */
+export function restrained(w: WorldState, rules: Rules, actor: number, target: number): boolean {
+  const dem = rules.ai.democraticPeace;
+  if (dem.includes(w.countries[actor]!.ideology) && dem.includes(w.countries[target]!.ideology)) return true;
+  return rules.ai.friendlyRestraint && relationLevel(w, rules, actor, target, 0) >= 5;
+}
+
 /** Un turno IA: per ogni paese che agisce, bersaglio, azione e ritardo. */
 export function planAiTurn(w: WorldState, rules: Rules, rng: Rng, player: number, playerTargetable = false): PlannedAction[] {
   const plans: PlannedAction[] = [];
@@ -145,6 +160,7 @@ export function planAiTurn(w: WorldState, rules: Rules, rng: Rng, player: number
     const chosen = chooseAction(w, rules, rng, actor, target);
     const code = chosen === undefined ? undefined : adjustAction(w, actor, target, chosen);
     if (code === undefined) continue;
+    if ((code === 20 || code === 21) && restrained(w, rules, actor, target)) continue;
     plans.push({ actor, target, code, delayHours: rng.int(0, 23) + 24 * rng.int(0, 2) });
   }
   return plans;

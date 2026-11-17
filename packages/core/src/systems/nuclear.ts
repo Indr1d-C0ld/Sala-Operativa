@@ -19,6 +19,11 @@ export function hasNukes(c: Country): boolean {
   return c.nucLevel >= 1 && c.warheads >= 1;
 }
 
+/** Arsenale credibile per la deterrenza (◇): livello nucleare ≥ 4 e testate. */
+export function deterrent(c: Country): boolean {
+  return c.nucLevel >= 4 && hasNukes(c);
+}
+
 /** Regione "di casa" di un paese (l'ultima in cui è membro a pieno titolo), o -1. */
 function homeRegion(w: WorldState, i: number): number {
   let home = -1;

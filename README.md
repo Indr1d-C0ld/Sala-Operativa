@@ -88,6 +88,8 @@ npm test
 npm run typecheck
 ```
 
+`npm run taratura` simula molte partite senza interfaccia e riassume il comportamento dell'IA (guerre, annessioni, atomiche, pause per il giocatore); le opzioni sono in testa a `tools/taratura_ia.ts`.
+
 ## Struttura
 
 | percorso | contenuto |
@@ -115,7 +117,7 @@ Il modello di simulazione è stato ricostruito studiando l'eseguibile di *Shadow
 
 ## Stato
 
-Il gioco è un **prototipo giocabile** completo nei sistemi principali. Fra i passi possibili: altri paesi giocabili oltre agli Stati Uniti, viste regionali della carta, più salvataggi, la taratura dell'IA, un'app Android. Le scelte di modello ancora provvisorie sono segnate con ◇ in [MODELLO.md](docs/MODELLO.md); il diario completo è in [STATO.md](docs/STATO.md).
+Il gioco è un **prototipo giocabile** completo nei sistemi principali. Fra i passi possibili: altri paesi giocabili oltre agli Stati Uniti, viste regionali della carta, più salvataggi, un'app Android. Le scelte di modello ancora provvisorie sono segnate con ◇ in [MODELLO.md](docs/MODELLO.md); il diario completo è in [STATO.md](docs/STATO.md).
 
 ## Licenza
 

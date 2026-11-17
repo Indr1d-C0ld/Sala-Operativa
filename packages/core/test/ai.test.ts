@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classicRules as rules, generationRules } from "@melchior/data";
-import { adjustAction, chooseAction, planAiTurn, Rng, Simulation, worldFromPack, type ScenarioPack } from "../src/index.js";
+import { adjustAction, chooseAction, planAiTurn, restrained, Rng, Simulation, worldFromPack, type ScenarioPack } from "../src/index.js";
 
 describe("tabelle del turno IA", () => {
   it("in ogni colonna i pesi di ciascun gruppo sommano a 100 (BIGTABLE.TXT)", () => {
@@ -85,5 +85,55 @@ describe.skipIf(!existsSync(PACK))("turno IA su un mondo generato", () => {
     }
     const saved = Simulation.load(sim.save(), rules);
     expect(saved.queue).toEqual(sim.queue);                   // le azioni in coda si salvano
+  });
+
+  it("le democrazie non si attaccano e nessuno attacca gli amici", () => {
+    const x = fresh();
+    const k = (c: string) => x.countries.findIndex((c2) => c2.key === c);
+    x.countries[k("UK")]!.ideology = "A";
+    x.countries[k("EI")]!.ideology = "C";
+    expect(restrained(x, rules, k("UK"), k("EI"))).toBe(true);
+    expect(restrained(x, rules, k("KN"), k("KS"))).toBe(false);
+    const off = { ...rules, ai: { ...rules.ai, democraticPeace: [] } };
+    x.countries[k("EI")]!.ideology = "B";
+    expect(restrained(x, off, k("UK"), k("EI"))).toBe(false);
+    // con l'IA libera di scegliere, mai attacchi chirurgici o invasioni fra democrazie
+    for (let s = 0; s < 200; s++) {
+      for (const p of planAiTurn(w, rules, new Rng(s), us)) {
+        if (p.code !== 20 && p.code !== 21) continue;
+        const dem = rules.ai.democraticPeace;
+        expect(dem.includes(w.countries[p.actor]!.ideology) && dem.includes(w.countries[p.target]!.ideology)).toBe(false);
+      }
+    }
+  });
+
+  const invade = (setup: (x: ReturnType<typeof fresh>) => [number, number]) => {
+    const x = fresh();
+    const [a, t] = setup(x);
+    const sim = new Simulation({ world: x, rules, seed: 2, start: new Date(Date.UTC(2026, 0, 1)), player: us });
+    sim.queue.push({ kind: "action", actor: a, target: t, code: 21, day: sim.day + 1, hour: 0 });
+    sim.advanceDay();
+    return sim.reports.map((r) => r.key);
+  };
+
+  it("deterrenza: nessuno invade una potenza nucleare", () => {
+    expect(invade((x) => [x.countries.findIndex((c) => c.key === "CH"), x.countries.findIndex((c) => c.key === "IN")])).toContain("militaryExercises");
+  });
+
+  it("oltre confine l'IA invade solo dove ha truppe", () => {
+    // la Cina non confina con il Brasile e non vi ha truppe
+    const keys = invade((x) => [x.countries.findIndex((c) => c.key === "CH"), x.countries.findIndex((c) => c.key === "BR")]);
+    expect(keys).toContain("militaryExercises");
+    expect(keys).not.toContain("warStarted");
+  });
+
+  it("una guerra fra vicini parte ancora", () => {
+    const keys = invade((x) => {
+      const a = x.countries.findIndex((c) => c.key === "KS");
+      const t = x.countries.findIndex((c) => c.key === "KN");
+      x.countries[t]!.nucLevel = 0;                        // senza arsenale credibile
+      return [a, t];
+    });
+    expect(keys).toContain("warStarted");
   });
 });

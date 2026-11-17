@@ -310,7 +310,40 @@ Il turno dei paesi IA è in `systems/ai.ts`. Viene da `FUN_b442_0000` (overlay 3
 - **Correzioni dopo la scelta.** 5 e 23 spostano il livello commerciale di un passo; l'attacco nucleare senza livello nucleare 4 diventa un assassinio; gli attacchi contro un paese più forte diventano armi ai ribelli.
 - **Esecuzione.** Dopo `rand(0,23)` ore più `rand(0,2)` giorni.
 
-**Quirk importante.** L'IA legge al contrario sia la relazione (la tratta come il "Country Interaction Mood" del manuale, 7 = inimicizia) sia l'etica (la tratta come spietatezza). Così gli alleati si condannano e si invadono, e i paesi etici prendono più spesso il ramo estremo. `rules.ai.originalScales = false` (predefinito) capovolge le due scale; `true` riproduce l'originale. Anche con la correzione l'IA resta aggressiva: in tre anni del 2026 circa 65 notizie l'anno, soprattutto armi ai ribelli e tentativi di assassinio, che riescono una volta su quattro.
+**Quirk importante.** L'IA legge al contrario tre scale:
+- la relazione, trattata come il "Country Interaction Mood" del manuale (7 = inimicizia);
+- l'etica, trattata come spietatezza;
+- la pace mondiale nella tabella delle colonne: un mondo in pace (6) sceglie le colonne più ostili, mentre nel resto del gioco 1 è il mondo in subbuglio (l'atomica porta la pace a 1, e con pace bassa agiscono più paesi).
+
+Così gli alleati si condannano e si invadono, e i paesi etici prendono più spesso il ramo estremo. `rules.ai.originalScales = false` (predefinito) capovolge le tre scale; `true` riproduce l'originale. La tabella dei gruppi per etica ha 6 righe ma l'originale la indicizza con l'etica 1–6, e la 6 cade fuori: con le scale corrette la riga è spietatezza − 1 (◇).
+
+**Taratura (◇, novembre 2026).** `npm run taratura` (`tools/taratura_ia.ts`) simula molte partite senza interfaccia, con un giocatore automatico che non reagisce, respinge le proposte e alla resa mobilita. Conta azioni IA per tipo ed esito, guerre, annessioni, atomiche, allerte, cambi di regime, pause per il giocatore, PIL e paesi rimasti. Le opzioni (anni, durata, semi, deriva, regole da sovrascrivere) passano nella variabile `TARATURA`.
+
+Prima della taratura, in 8 partite di 10 anni per anno di partenza:
+- nel 2026 c'erano 3–4 attacchi atomici a partita e il PIL mondiale finiva a ×0,54;
+- nel 2008 la Cina annetteva in media 5 paesi a partita (Germania, Brasile, Messico, Iran);
+- il Regno Unito annetteva l'Irlanda, l'Italia San Marino e l'Austria, la Francia il Lussemburgo.
+
+Le atomiche venivano quasi tutte da guerre fra potenze nucleari (Cina–Russia, India–Cina), dove il ramo estremo sceglie l'azione 24 una volta su quattro. Le conquiste lontane venivano da `war.projectionShare`, che lasciava invadere ovunque la prima potenza militare dopo gli Stati Uniti. Le guerre fra europei nascevano dalla generazione: parte delle democrazie parlamentari ricche diventa socialismo democratico (C), che nelle tabelle originali non è amico del capitalismo democratico (A).
+
+Regole aggiunte, tutte in `rules.ai` e disattivabili:
+- **`nuclearOnlyWhenLosing`:** anche in guerra l'IA lancia per prima solo se il suo lato è sotto il 50% di forza; altrimenti minaccia;
+- **`nuclearDeterrence`:** nessuno invade un paese con livello nucleare ≥ 4 e testate; al posto dell'invasione, esercitazioni militari al confine;
+- **`projectionNeedsTroops`:** oltre i confini l'IA invade solo dove ha truppe schierate vicino al bersaglio, come l'originale che legge i contingenti TROOPS; la soglia `war.projectionShare` vale ora solo per il giocatore;
+- **`friendlyRestraint`:** niente attacchi chirurgici né invasioni contro un paese amico (relazione ≥ 5);
+- **`democraticPeace`:** due paesi con ideologia democratica (A, C, E, K) non si attaccano né si invadono;
+- **`nuclearAlertMaxRelation`** (1): l'allerta nucleare, cioè l'atomica trattenuta, scatta solo fra nemici; altrimenti l'azione cade;
+- **`rogueDie`** (7, come l'originale): il dado del ramo fuori tabella. Provato a 10 e 14, cambia poco: le operazioni coperte vengono soprattutto da BIGTABLE.
+
+Dopo la taratura (8 partite di 10 anni, deriva 0, valori per anno):
+
+| partenza | guerre | annessioni | atomiche | allerte | PIL dopo 10 anni | allarmi / proposte al giocatore |
+|---|---|---|---|---|---|---|
+| 1990 | 0,42 | 0,14 | 0 | 4,6 | ×1,33 | 2,5 / 5,5 |
+| 2008 | 0,07 | 0,01 | 0 | 1,0 | ×1,28 | 0,7 / 0,7 |
+| 2026 | 0,39 | 0,16 | 0,01 | 1,7 | ×1,34 | 2,5 / 0,8 |
+
+Su partite di 20 anni e con deriva 0,35 o 1 i valori restano simili, e il PIL mondiale circa raddoppia. Il 2008 è quieto perché parte con la pace mondiale più alta. Le azioni IA restano in maggioranza operazioni coperte (45–60%), quasi sempre fallite: è la tabella originale, e non l'ho toccata.
 
 Parti incerte, da rivedere (◇):
 - la frequenza del turno (7 giorni, scelta nostra: il ciclo principale che chiama la funzione non è decifrato);
@@ -357,7 +390,7 @@ Poi il bersaglio mette in coda condanna, sabotaggio e assassinio contro l'attacc
 Scelte nostre (◇):
 - le tre fasi valgono per ogni attacco, non solo per quelli del giocatore, e sono immediate;
 - lo spostamento delle alleanze (fase 1) è lasciato alla ricomposizione annuale delle squadre;
-- **`rules.ai.nuclearOnlyAtWar`** (attivo): fuori da una guerra contro il bersaglio l'IA non lancia, ma dà un'allerta nucleare. Senza questo freno, con il turno settimanale, le potenze nucleari sceglievano l'azione 24 una decina di volte l'anno e in cinque anni azzeravano il PIL mondiale. Con il freno, in tre partite di cinque anni ci sono stati 0, 1 e 5 attacchi, tutti in guerre fra Cina e Russia.
+- **`rules.ai.nuclearOnlyAtWar`** (attivo): fuori da una guerra contro il bersaglio l'IA non lancia, ma dà un'allerta nucleare. Senza questo freno, con il turno settimanale, le potenze nucleari sceglievano l'azione 24 una decina di volte l'anno e in cinque anni azzeravano il PIL mondiale. Con il solo freno restavano 3–4 attacchi a partita in dieci anni, tutti in guerre fra potenze nucleari; con la taratura dell'IA (sopra) sono quasi spariti.
 
 Il bilancio del giocatore (3.16) è in `systems/budget.ts`. Segue la valutazione di `FUN_5f0c_1842`, l'applicazione di fine anno e il mese di `FUN_5f0c_308e`. Valori iniziali:
 - l'aliquota sulle persone è quella che fa tornare le entrate del Factbook (per il 2026: 4,9 T$ di entrate, 6,9 T$ di uscite, aliquota 18,2%);

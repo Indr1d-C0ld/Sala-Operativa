@@ -10,6 +10,7 @@
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "dev": "vite packages/app",
     "build": "tsc -b && vite build packages/app",
+    "taratura": "vitest run --config tools/taratura.config.ts --silent=false",
     "scenari": "node -e \"for(let y=1990;y<=2026;y++)require('child_process').execFileSync('python3',['-I','tools/export_scenario.py',String(y)],{stdio:'inherit'})\""
   },
   "devDependencies": {

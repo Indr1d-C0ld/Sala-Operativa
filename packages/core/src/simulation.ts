@@ -4,10 +4,10 @@ import type { WorldState } from "./types.js";
 import { ACTIONS, actionRefusal, performAction, type ActionOutcome, type ActionRefusal } from "./systems/actions.js";
 import { planAiTurn } from "./systems/ai.js";
 import { endWar, reinforce, startWar, warOf, warTick } from "./systems/war.js";
-import { defaultContingent, deployTroops } from "./systems/troops.js";
+import { defaultContingent, deployTroops, hasForwardTroops } from "./systems/troops.js";
 import { relationLevel } from "./systems/relation.js";
 import { DISASTER_TYPES, strikeDisaster } from "./systems/disasters.js";
-import { hasNukes, nuclearStrike, warEscalation } from "./systems/nuclear.js";
+import { deterrent, hasNukes, nuclearStrike, warEscalation } from "./systems/nuclear.js";
 import { actionPopularity, applyBudget, evaluateBudget, initialBudget, monthlyBudget, type BudgetProjection, type PlayerBudget, type Rates, type Spending } from "./systems/budget.js";
 import { affinity } from "./systems/actions.js";
 import { holdElection, MAX_TERMS, nextElection, unpopularityCheck } from "./systems/term.js";
@@ -322,6 +322,16 @@ export class Simulation {
     });
   }
 
+  /** `a` combatte contro `b` e il suo lato sta perdendo (forza sotto il 50%)? */
+  private losing(a: number, b: number): boolean {
+    return this.world.wars.some((war) => {
+      const side = (i: number) => (war.sides[0].countries.includes(i) ? 0 : war.sides[1].countries.includes(i) || war.theater === i ? 1 : -1);
+      const sa = side(a);
+      const sb = side(b);
+      return sa >= 0 && sb >= 0 && sa !== sb && war.sides[sa === 0 ? 0 : 1].strength < 50;
+    });
+  }
+
   /** Mette in coda un'azione IA fra `days` giorni (ora `hour`). */
   private queueAction(actor: number, target: number, code: number, days: number, hour = 0): void {
     this.queue.push({ kind: "action", actor, target, code, day: this.day + days, hour });
@@ -482,8 +492,18 @@ export class Simulation {
       return;
     }
     if (refusal) return;
-    if (code === 24 && this.rules.ai.nuclearOnlyAtWar && !this.atWarWith(actor, target)) {
-      // allerta nucleare: la minaccia scuote i due paesi ma nessuna testata parte
+    // ◇ oltre i confini l'IA invade solo dove ha truppe schierate
+    const overseas = code === 21 && this.rules.ai.projectionNeedsTroops && actor !== this.player
+      && !(w.neighbours[actor] ?? []).includes(target) && !hasForwardTroops(w, actor, target, this.day);
+    if (overseas || (code === 21 && this.rules.ai.nuclearDeterrence && deterrent(w.countries[target]!))) {
+      // nessuno invade una potenza nucleare: restano le manovre al confine (◇)
+      this.report({ key: "militaryExercises", actor, country: target });
+      return;
+    }
+    const firstUse = this.rules.ai.nuclearOnlyWhenLosing && !this.losing(actor, target);
+    if (code === 24 && ((this.rules.ai.nuclearOnlyAtWar && !this.atWarWith(actor, target)) || firstUse)) {
+      // allerta nucleare: la minaccia scuote i due paesi ma nessuna testata parte; ◇ solo fra nemici
+      if (relationLevel(w, this.rules, actor, target, 0) > this.rules.ai.nuclearAlertMaxRelation) return;
       for (const i of [actor, target]) w.countries[i]!.anxiety.nuclear = 100;
       this.report({ key: "nuclearAlert", actor, country: target });
       return;

@@ -20,10 +20,10 @@ export { Simulation, updateLeaderEthic, type GameEvent, type Report, type GameOv
 export { worldFromPack, warheadsIn, type ScenarioPack, type WorldOptions } from "./scenario.js";
 export { tileOwners, type Succession } from "./map.js";
 export { ACTIONS, actionThreshold, actionRefusal, performAction, affinity, type ActionDef, type ActionGroup, type ActionOutcome, type ActionRefusal } from "./systems/actions.js";
-export { planAiTurn, chooseActors, chooseTarget, chooseAction, adjustAction, type PlannedAction } from "./systems/ai.js";
+export { planAiTurn, chooseActors, chooseTarget, chooseAction, adjustAction, restrained, type PlannedAction } from "./systems/ai.js";
 export { REACTIONS, DECISION_CODES, REACTION_CODES, resolveReaction, type Reaction, type ReactionOutcome } from "./systems/reaction.js";
 export { warOf, canInvade, startWar, warTick, endWar, peaceThreshold, reinforce } from "./systems/war.js";
-export { nuclearStrike, warEscalation, hasNukes, type StrikeOutcome } from "./systems/nuclear.js";
+export { nuclearStrike, warEscalation, hasNukes, deterrent, type StrikeOutcome } from "./systems/nuclear.js";
 export { initialBudget, evaluateBudget, applyBudget, monthlyBudget, actionPopularity, type PlayerBudget, type BudgetProjection, type Rates, type Spending } from "./systems/budget.js";
 export { electionDay, nextElection, holdElection, unpopularityCheck, MAX_TERMS } from "./systems/term.js";
 export { ADVISORS, advisorReport, cabinetBriefing, type AdvisorId, type AdvisorLine, type AdvisorContext, type Opinion } from "./systems/advisors.js";
