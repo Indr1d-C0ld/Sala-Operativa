@@ -63,11 +63,11 @@ Quando arriva un allarme, una proposta o la resa, il tempo si ferma finché non 
 Servono **Node.js 22** o successivo e **Python 3** (solo per rigenerare gli scenari).
 
 ```bash
-git clone https://github.com/Indr1d-C0ld/melchior-shadow.git
+git clone https://github.com/Indr1d-C0ld/Shadow-President.git
 ```
 
 ```bash
-cd melchior-shadow && npm install
+cd Shadow-President && npm install
 ```
 
 ```bash
