@@ -487,7 +487,7 @@ def triad(root: str, kind: str) -> list[int]:
 
 
 def music_tema() -> tuple[np.ndarray, float]:
-    """Sala operativa: Re minore, 92 bpm, 32 battute. Ostinato FM, archi, corno, ping radar."""
+    """Sala Operativa: Re minore, 92 bpm, 32 battute. Ostinato FM, archi, corno, ping radar."""
     s = Song(92)
     s.program(0, 5, 70, pan=44, reverb=50)    # piano elettrico FM: ostinato
     s.program(1, 49, 78, pan=84, reverb=70)   # archi lenti: tappeto

@@ -1,4 +1,4 @@
-# Sala operativa
+# Sala Operativa
 
 **Una simulazione geopolitica in pixel-art, dal 1990 al 2026.** Sei il presidente degli Stati Uniti: governi un mondo di oltre duecento paesi costruito sui dati reali del CIA World Factbook, fra diplomazia, operazioni coperte, guerre, bilancio federale, elezioni e crisi nucleari. Ogni partita parte dall'anno che scegli e può restare fedele alla storia o deviare verso un mondo alternativo.
 
