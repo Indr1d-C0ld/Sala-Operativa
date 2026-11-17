@@ -52,6 +52,7 @@ Il gioco è **interamente in italiano** ed è ispirato a *Shadow President* (D.C
 | **Spazio** / **Invio** | avanza di un giorno / di un mese |
 | **Tab** | mappa o elenco dei paesi |
 | **C** / **V** | colori della mappa (ideologia, squadre, regioni) / vista politica o fisica |
+| **Z**, rotella | ingrandisci la mappa: mondo, regione, paese (trascinala per spostarti) |
 | **M** / **U** | musica / effetti sonori |
 | **F5** / **F9** | salva / carica la partita |
 | **Esc** | torna al menu iniziale |
@@ -106,7 +107,7 @@ npm run typecheck
 ## Dati, fonti e crediti
 
 - **CIA World Factbook** 1990–2026 (pubblico dominio, opera del governo USA), tramite l'archivio [MilkMp/CIA-World-Factbooks-Archive-1990-2025](https://github.com/MilkMp/CIA-World-Factbooks-Archive-1990-2025) e [factbook/factbook.json](https://github.com/factbook/factbook.json).
-- **Natural Earth** 1:50m, confini degli stati (pubblico dominio), per la carta politica.
+- **Natural Earth** 1:50m, confini degli stati e raster "Natural Earth I" con rilievo ombreggiato (pubblico dominio), per la carta politica e per il rilievo della vista ingrandita.
 - **Grafica pixel-art**: rilievo della carta e ritratti dei consiglieri generati con [PixelLab](https://www.pixellab.ai/) e ridotti alla palette del gioco.
 - **Suoni e musiche**: composti e sintetizzati per il progetto (`tools/build_audio.py`).
 - **Contingenti militari e arsenali nucleari** di partenza: stime pubbliche arrotondate, nelle regole di generazione.
@@ -117,7 +118,7 @@ Il modello di simulazione è stato ricostruito studiando l'eseguibile di *Shadow
 
 ## Stato
 
-Il gioco è un **prototipo giocabile** completo nei sistemi principali. Fra i passi possibili: altri paesi giocabili oltre agli Stati Uniti, viste regionali della carta, più salvataggi, un'app Android. Le scelte di modello ancora provvisorie sono segnate con ◇ in [MODELLO.md](docs/MODELLO.md); il diario completo è in [STATO.md](docs/STATO.md).
+Il gioco è un **prototipo giocabile** completo nei sistemi principali. Fra i passi possibili: altri paesi giocabili oltre agli Stati Uniti, più salvataggi, un'app Android. Le scelte di modello ancora provvisorie sono segnate con ◇ in [MODELLO.md](docs/MODELLO.md); il diario completo è in [STATO.md](docs/STATO.md).
 
 ## Licenza
 

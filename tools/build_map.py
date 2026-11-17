@@ -10,6 +10,10 @@ Uscita in packages/app/public/mappa/:
   carta.bin   un byte per pixel, riga per riga: 0 = mare, k = tessera k-1
   carta.json  dimensioni, proiezione, codici delle tessere e loro baricentro in pixel
 
+Con una larghezza diversa da 640 (per esempio 2560, la carta ingrandita 4× delle viste per
+regione e per paese) i file si chiamano carta_<larghezza>.bin e carta_<larghezza>.json; l'elenco
+delle tessere è lo stesso a ogni larghezza.
+
 Uso: python3 tools/build_map.py [larghezza]
 """
 import json
@@ -111,6 +115,9 @@ def main():
     y_top, y_bottom = miller_y(LAT_N), miller_y(LAT_S)
     scale = width / (2 * math.pi)
     height = round((y_top - y_bottom) * scale)
+    if width % 640 == 0:
+        # multiplo esatto della carta base: il pixel (x, y) a 640 copre i pixel (kx…, ky…) a 640·k
+        height = round((y_top - y_bottom) * 640 / (2 * math.pi)) * (width // 640)
 
     def project(ring):
         lon, lat = ring[:, 0], np.clip(ring[:, 1], -89.9, 89.9)
@@ -165,8 +172,9 @@ def main():
         centroids.append([int(xs.mean()), int(ys.mean())] if len(xs) else None)
 
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "carta.bin").write_bytes(grid.tobytes())
-    (OUT / "carta.json").write_text(json.dumps({
+    name = "carta" if width == 640 else f"carta_{width}"
+    (OUT / f"{name}.bin").write_bytes(grid.tobytes())
+    (OUT / f"{name}.json").write_text(json.dumps({
         "format": "melchior-carta/1",
         "source": "Natural Earth 1:50m admin 0 (pubblico dominio)",
         "width": width, "height": height,

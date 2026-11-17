@@ -8,7 +8,8 @@ import {
 import { classicRules, generationRules } from "@melchior/data";
 import {
   BitmapFont, CELL_H, DEFAULT_THEME, Framebuffer, HEIGHT, ITALIAN_CHARSET, RAMP, Screen, WIDTH,
-  defaultPalette, drawGauge, drawList, drawMap, drawWindow, tileAt, type MapEmphasis, type MapRaster, type MapStyle,
+  defaultPalette, drawGauge, drawList, drawMap, drawWindow, tileAt, windowToMap, type MapEmphasis, type MapRaster, type MapStyle,
+  type MapWindow,
 } from "@melchior/ui";
 import testi from "./testi/it.json";
 import { GameAudio, type SoundName } from "./audio.js";
@@ -106,6 +107,128 @@ async function loadMap(): Promise<void> {
   const pixels = new Uint8Array(bin);
   const relief = rilievo && rilievo.byteLength === pixels.length ? new Uint8Array(rilievo) : undefined;
   carta = relief ? { ...meta, pixels, relief } : { ...meta, pixels };
+}
+
+// Vista ingrandita (Z, rotella): finestra sulla carta 4× (tools/build_map.py 2560), caricata la
+// prima volta che serve. Livello 1 "regione" a 1:1, livello 2 "paese" con i pixel raddoppiati.
+let zoom = 0;
+let dettaglio: MapRaster | null = null;
+let dettaglioInCarica = false;
+let centro: [number, number] = [0, 0];      // centro della vista, in pixel della carta 4×
+let tileStats: { n: number; cx: number; sx: number; hx: Float64Array; hy: Float64Array }[] = [];
+let drag: { x: number; y: number; centro: [number, number]; moved: boolean } | null = null;
+
+async function loadDetail(): Promise<void> {
+  if (dettaglio || dettaglioInCarica) return;
+  dettaglioInCarica = true;
+  notice = testi.caricamentoCarta;
+  render();
+  const base = `${import.meta.env.BASE_URL}mappa/`;
+  try {
+    const [meta, bin, rilievo] = await Promise.all([
+      fetch(`${base}carta_2560.json`).then((r) => r.json() as Promise<Omit<MapRaster, "pixels">>),
+      fetch(`${base}carta_2560.bin`).then((r) => r.arrayBuffer()),
+      fetch(`${base}rilievo_2560.bin`).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null),
+    ]);
+    const pixels = new Uint8Array(bin);
+    const relief = rilievo && rilievo.byteLength === pixels.length ? new Uint8Array(rilievo) : undefined;
+    // per ogni tessera gli istogrammi delle colonne e delle righe (per la mediana) e la direzione
+    // media in x, perché la carta si ripete (Russia, Figi). Ogni pixel pesa per la superficie vera
+    // che copre: nella proiezione di Miller le terre del nord sono ingrandite (l'Alaska).
+    const w = meta.width, h = meta.height;
+    const scale = w / (2 * Math.PI);
+    const yTop = 1.25 * Math.log(Math.tan(Math.PI / 4 + 0.4 * (84 * Math.PI) / 180));
+    const rowWeight = Array.from({ length: h }, (_, y) => {
+      const lat = 2.5 * Math.atan(Math.exp((yTop - (y + 0.5) / scale) / 1.25)) - 0.625 * Math.PI;
+      return Math.cos(lat) * Math.cos(0.8 * lat);
+    });
+    tileStats = meta.tiles.map(() => ({ n: 0, cx: 0, sx: 0, hx: new Float64Array(w), hy: new Float64Array(h) }));
+    for (let p = 0; p < pixels.length; p++) {
+      const t = pixels[p]!;
+      if (!t) continue;
+      const s = tileStats[t - 1]!;
+      const x = p % w, y = Math.floor(p / w);
+      const a = (x / w) * 2 * Math.PI;
+      const k = rowWeight[y]!;
+      s.n += k;
+      s.cx += k * Math.cos(a);
+      s.sx += k * Math.sin(a);
+      s.hx[x]! += k;
+      s.hy[y]! += k;
+    }
+    dettaglio = relief ? { ...meta, pixels, relief } : { ...meta, pixels };
+    centerOn(order[selected]);
+  } catch {
+    zoom = 0;
+  }
+  dettaglioInCarica = false;
+  if (notice === testi.caricamentoCarta) notice = "";
+  render();
+}
+
+/**
+ * Centro di un paese nella carta 4×: la mediana dei pixel delle tessere che governa, così le
+ * terre lontane (l'Alaska per gli Stati Uniti) non spostano il centro fuori dal paese. In x la
+ * mediana parte dal punto opposto alla direzione media, perché la carta si ripete.
+ */
+function countryCenter(i: number): [number, number] | null {
+  if (!dettaglio) return null;
+  const { width: w, height: h } = dettaglio;
+  const hx = new Float64Array(w), hy = new Float64Array(h);
+  let n = 0, cx = 0, sx = 0;
+  owners.forEach((o, t) => {
+    const s = tileStats[t];
+    if (!s || s.n <= 0 || ruler(o) !== i) return;
+    n += s.n; cx += s.cx; sx += s.sx;
+    for (let k = 0; k < w; k++) hx[k]! += s.hx[k]!;
+    for (let k = 0; k < h; k++) hy[k]! += s.hy[k]!;
+  });
+  if (n <= 0) return null;
+  const median = (hist: Float64Array, start: number) => {
+    let acc = 0;
+    for (let k = 0; k < hist.length; k++) {
+      const j = (start + k) % hist.length;
+      acc += hist[j]!;
+      if (acc * 2 >= n) return j + 0.5;
+    }
+    return start;
+  };
+  const opposite = Math.round(((Math.atan2(sx, cx) / (2 * Math.PI)) * w + w * 1.5)) % w;
+  return [median(hx, opposite), median(hy, 0)];
+}
+
+function centerOn(i: number | undefined): void {
+  const c = i === undefined ? null : countryCenter(i);
+  if (c) centro = c;
+}
+
+/** Carta e finestra da disegnare: il mondo, o la finestra sulla carta 4× attorno a `centro`. */
+function mapView(): { map: MapRaster; win?: MapWindow } | null {
+  if (!carta) return null;
+  if (zoom === 0 || !dettaglio) return { map: carta };
+  const scale = zoom;
+  const vw = WIDTH / scale, vh = Math.ceil(carta.height / scale);
+  const x = Math.round(centro[0] - vw / 2);
+  const y = Math.round(Math.min(Math.max(centro[1] - vh / 2, 0), dettaglio.height - vh));
+  return { map: dettaglio, win: { x, y, w: WIDTH, h: carta.height, scale } };
+}
+
+/** Cambia livello di ingrandimento; `at` è un punto della carta sullo schermo da mettere al centro. */
+function setZoom(z: number, at?: [number, number]): void {
+  z = Math.min(Math.max(z, 0), 2);
+  if (z === zoom) return;
+  if (at && carta) {
+    const v = mapView();
+    if (v?.win && dettaglio) {
+      const m = windowToMap(dettaglio, v.win, at[0], at[1]);
+      if (m) centro = [m[0] + 0.5, m[1] + 0.5];
+    } else if (z > 0) {
+      const k = (dettaglio?.width ?? carta.width * 4) / carta.width;
+      centro = [(at[0] + 0.5) * k, (at[1] + 0.5) * k];
+    }
+  } else if (z > zoom) centerOn(order[selected]);
+  zoom = z;
+  if (zoom > 0 && !dettaglio) void loadDetail();
 }
 
 function countryEmphasis(i: number): MapEmphasis {
@@ -894,7 +1017,13 @@ function renderNews(x: number, y: number, w: number, h: number, rows: number, co
 
 function renderMap(): void {
   if (!sim || !carta) return;
-  drawMap(fb, carta, 0, MAP_Y, owners.map(ruler), countryColor, MAP_STYLE, countryEmphasis);
+  const v = mapView()!;
+  drawMap(fb, v.map, 0, MAP_Y, owners.map(ruler), countryColor, MAP_STYLE, countryEmphasis, v.win);
+  if (v.win) {
+    const label = testi.zoom[zoom] ?? "";
+    fb.fillRect(0, MAP_Y, 8 * label.length + 8, CELL_H + 2, RAMP.grey + 2);
+    font.draw(fb, label, 4, MAP_Y + 1, theme.textHighlight);
+  }
   fb.hline(0, MAP_Y + carta.height, WIDTH, RAMP.grey + 9);
   const top = MAP_Y + carta.height + 4;
   const h = HEIGHT - CELL_H - 12 - top;
@@ -1006,7 +1135,7 @@ window.addEventListener("keydown", (e) => {
   // suono predefinito del tasto; le schermate lo precisano (apri, chiudi, regola, ordine, rifiuto)
   if (/^(Arrow|Page)/.test(e.key)) ui("cursore");
   else if (e.key === "Escape") ui("chiudi");
-  else if (e.key === "Tab" || e.key === " " || /^[cCvV]$/.test(e.key)) ui("clic");
+  else if (e.key === "Tab" || e.key === " " || /^[cCvVzZ]$/.test(e.key)) ui("clic");
   if (titleKey(e.key)) {
     e.preventDefault();
     render();
@@ -1046,6 +1175,7 @@ window.addEventListener("keydown", (e) => {
     render();
     return;
   }
+  const before = selected;
   const page = 16;
   const n = order.length;
   if (e.key === "ArrowDown") selected = Math.min(n - 1, selected + 1);
@@ -1068,8 +1198,10 @@ window.addEventListener("keydown", (e) => {
   else if (e.key === "Tab") view = view === "mappa" ? "elenco" : "mappa";
   else if (e.key === "c" || e.key === "C") colorMode = (colorMode + 1) % 3;
   else if (e.key === "v" || e.key === "V") MAP_STYLE.view = MAP_STYLE.view === "fisica" ? "politica" : "fisica";
+  else if ((e.key === "z" || e.key === "Z") && view === "mappa") setZoom((zoom + 1) % 3);
   else if (e.key === "Escape") title = savedGameDay() !== null ? 6 : 5;
   else return;
+  if (zoom > 0 && selected !== before) centerOn(order[selected]);
   e.preventDefault();
   render();
 });
@@ -1082,10 +1214,32 @@ function pointer(e: MouseEvent): [number, number] {
 function countryUnder(e: MouseEvent): number {
   if (view !== "mappa" || !carta) return -1;
   const [x, y] = pointer(e);
-  const t = tileAt(carta, x, y - MAP_Y);
+  const v = mapView()!;
+  const t = tileAt(v.map, x, y - MAP_Y, v.win);
   return t >= 0 ? ruler(owners[t] ?? -1) : -1;
 }
+canvas.addEventListener("mousedown", (e) => {
+  if (e.button === 0 && zoom > 0 && dettaglio) {
+    const [x, y] = pointer(e);
+    drag = { x, y, centro: [...centro], moved: false };
+  }
+});
+window.addEventListener("mouseup", () => {
+  if (drag && !drag.moved) drag = null;
+});
 canvas.addEventListener("mousemove", (e) => {
+  if (drag && dettaglio && (e.buttons & 1)) {
+    // trascinando si sposta la vista ingrandita (in orizzontale la carta si ripete)
+    const [x, y] = pointer(e);
+    if (Math.abs(x - drag.x) + Math.abs(y - drag.y) > 3) drag.moved = true;
+    if (drag.moved) {
+      const w = dettaglio.width;
+      centro = [(((drag.centro[0] - (x - drag.x) / zoom) % w) + w) % w,
+        Math.min(Math.max(drag.centro[1] - (y - drag.y) / zoom, 0), dettaglio.height)];
+      render();
+      return;
+    }
+  }
   const h = countryUnder(e);
   if (h !== hovered) {
     hovered = h;
@@ -1094,6 +1248,11 @@ canvas.addEventListener("mousemove", (e) => {
 });
 canvas.addEventListener("click", (e) => {
   audio.unlock();
+  if (drag?.moved) {
+    drag = null;
+    return;
+  }
+  drag = null;
   const i = countryUnder(e);
   if (i < 0) return;
   const k = order.indexOf(i);
@@ -1101,6 +1260,16 @@ canvas.addEventListener("click", (e) => {
   ui("cursore");
   render();
 });
+
+canvas.addEventListener("wheel", (e) => {
+  if (view !== "mappa" || !carta || title !== null) return;
+  const [x, y] = pointer(e);
+  if (y < MAP_Y || y >= MAP_Y + carta.height) return;
+  e.preventDefault();
+  setZoom(zoom + (e.deltaY < 0 ? 1 : -1), [x, y - MAP_Y]);
+  ui("clic");
+  render();
+}, { passive: false });
 
 const fit = () => screen.fitInteger(window.innerWidth, window.innerHeight);
 window.addEventListener("resize", fit);

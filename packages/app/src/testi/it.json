@@ -54,7 +54,13 @@
   "guidaSquadra": "guida la squadra {n}",
   "membroSquadra": "squadra {n}",
   "paceEticaAmbizione": "Pace/etica/ambiz.",
-  "aiutoMappa": "A azioni  B bilancio  1-7 consiglieri  C {colori}  V vista  Esc menu",
+  "aiutoMappa": "A azioni  B bilancio  1-7 consiglieri  C {colori}  V vista  Z zoom  Esc menu",
+  "zoom": [
+    "Mondo",
+    "Regione",
+    "Paese"
+  ],
+  "caricamentoCarta": "Caricamento della carta ingrandita…",
   "modiColore": [
     "ideologia",
     "squadre",
