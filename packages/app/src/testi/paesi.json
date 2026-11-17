@@ -1,0 +1,1402 @@
+{
+ "AF": {
+  "nome": "Afghanistan",
+  "art": "l'",
+  "in": "in"
+ },
+ "AX": {
+  "nome": "Akrotiri",
+  "art": "",
+  "in": "a"
+ },
+ "AL": {
+  "nome": "Albania",
+  "art": "l'",
+  "in": "in"
+ },
+ "AG": {
+  "nome": "Algeria",
+  "art": "l'",
+  "in": "in"
+ },
+ "AN": {
+  "nome": "Andorra",
+  "art": "",
+  "in": "a"
+ },
+ "AO": {
+  "nome": "Angola",
+  "art": "l'",
+  "in": "in"
+ },
+ "AV": {
+  "nome": "Anguilla",
+  "art": "",
+  "in": "a"
+ },
+ "AC": {
+  "nome": "Antigua e Barbuda",
+  "art": "",
+  "in": "a"
+ },
+ "NT": {
+  "nome": "Antille Olandesi",
+  "art": "le",
+  "in": "art"
+ },
+ "SA": {
+  "nome": "Arabia Saudita",
+  "art": "l'",
+  "in": "in"
+ },
+ "AR": {
+  "nome": "Argentina",
+  "art": "l'",
+  "in": "in"
+ },
+ "AM": {
+  "nome": "Armenia",
+  "art": "l'",
+  "in": "in"
+ },
+ "AA": {
+  "nome": "Aruba",
+  "art": "",
+  "in": "a"
+ },
+ "JQ": {
+  "nome": "Atollo Johnston",
+  "art": "l'",
+  "in": "art"
+ },
+ "LQ": {
+  "nome": "Atollo Palmyra",
+  "art": "l'",
+  "in": "art"
+ },
+ "AS": {
+  "nome": "Australia",
+  "art": "l'",
+  "in": "in"
+ },
+ "AU": {
+  "nome": "Austria",
+  "art": "l'",
+  "in": "in"
+ },
+ "AJ": {
+  "nome": "Azerbaigian",
+  "art": "l'",
+  "in": "in"
+ },
+ "BF": {
+  "nome": "Bahamas",
+  "art": "le",
+  "in": "art"
+ },
+ "BA": {
+  "nome": "Bahrein",
+  "art": "il",
+  "in": "in"
+ },
+ "BG": {
+  "nome": "Bangladesh",
+  "art": "il",
+  "in": "in"
+ },
+ "BB": {
+  "nome": "Barbados",
+  "art": "",
+  "in": "a"
+ },
+ "BS": {
+  "nome": "Bassas da India",
+  "art": "",
+  "in": "a"
+ },
+ "BE": {
+  "nome": "Belgio",
+  "art": "il",
+  "in": "in"
+ },
+ "BH": {
+  "nome": "Belize",
+  "art": "il",
+  "in": "in"
+ },
+ "BN": {
+  "nome": "Benin",
+  "art": "il",
+  "in": "in"
+ },
+ "BD": {
+  "nome": "Bermuda",
+  "art": "le",
+  "in": "art"
+ },
+ "BT": {
+  "nome": "Bhutan",
+  "art": "il",
+  "in": "in"
+ },
+ "BO": {
+  "nome": "Bielorussia",
+  "art": "la",
+  "in": "in"
+ },
+ "BL": {
+  "nome": "Bolivia",
+  "art": "la",
+  "in": "in"
+ },
+ "BK": {
+  "nome": "Bosnia ed Erzegovina",
+  "art": "la",
+  "in": "in"
+ },
+ "BC": {
+  "nome": "Botswana",
+  "art": "il",
+  "in": "in"
+ },
+ "BR": {
+  "nome": "Brasile",
+  "art": "il",
+  "in": "in"
+ },
+ "BX": {
+  "nome": "Brunei",
+  "art": "il",
+  "in": "in"
+ },
+ "BU": {
+  "nome": "Bulgaria",
+  "art": "la",
+  "in": "in"
+ },
+ "UV": {
+  "nome": "Burkina Faso",
+  "art": "il",
+  "in": "in"
+ },
+ "BY": {
+  "nome": "Burundi",
+  "art": "il",
+  "in": "in"
+ },
+ "CB": {
+  "nome": "Cambogia",
+  "art": "la",
+  "in": "in"
+ },
+ "CM": {
+  "nome": "Camerun",
+  "art": "il",
+  "in": "in"
+ },
+ "CA": {
+  "nome": "Canada",
+  "art": "il",
+  "in": "in"
+ },
+ "CV": {
+  "nome": "Capo Verde",
+  "art": "",
+  "in": "a"
+ },
+ "CSHH": {
+  "nome": "Cecoslovacchia",
+  "art": "la",
+  "in": "in"
+ },
+ "CD": {
+  "nome": "Ciad",
+  "art": "il",
+  "in": "in"
+ },
+ "CI": {
+  "nome": "Cile",
+  "art": "il",
+  "in": "in"
+ },
+ "CH": {
+  "nome": "Cina",
+  "art": "la",
+  "in": "in"
+ },
+ "CY": {
+  "nome": "Cipro",
+  "art": "",
+  "in": "a"
+ },
+ "WE": {
+  "nome": "Cisgiordania",
+  "art": "la",
+  "in": "in"
+ },
+ "VT": {
+  "nome": "Città del Vaticano",
+  "art": "la",
+  "in": "art"
+ },
+ "CO": {
+  "nome": "Colombia",
+  "art": "la",
+  "in": "in"
+ },
+ "CN": {
+  "nome": "Comore",
+  "art": "le",
+  "in": "art"
+ },
+ "CF": {
+  "nome": "Congo",
+  "art": "il",
+  "in": "art"
+ },
+ "KN": {
+  "nome": "Corea del Nord",
+  "art": "la",
+  "in": "in"
+ },
+ "KS": {
+  "nome": "Corea del Sud",
+  "art": "la",
+  "in": "in"
+ },
+ "CS": {
+  "nome": "Costa Rica",
+  "art": "la",
+  "in": "in"
+ },
+ "IV": {
+  "nome": "Costa d’Avorio",
+  "art": "la",
+  "in": "in"
+ },
+ "HR": {
+  "nome": "Croazia",
+  "art": "la",
+  "in": "in"
+ },
+ "CU": {
+  "nome": "Cuba",
+  "art": "",
+  "in": "a"
+ },
+ "UC": {
+  "nome": "Curaçao",
+  "art": "",
+  "in": "a"
+ },
+ "DA": {
+  "nome": "Danimarca",
+  "art": "la",
+  "in": "in"
+ },
+ "DX": {
+  "nome": "Dhekelia",
+  "art": "",
+  "in": "a"
+ },
+ "DO": {
+  "nome": "Dominica",
+  "art": "",
+  "in": "a"
+ },
+ "EC": {
+  "nome": "Ecuador",
+  "art": "l'",
+  "in": "in"
+ },
+ "EG": {
+  "nome": "Egitto",
+  "art": "l'",
+  "in": "in"
+ },
+ "ES": {
+  "nome": "El Salvador",
+  "art": "",
+  "in": "in"
+ },
+ "AE": {
+  "nome": "Emirati Arabi Uniti",
+  "art": "gli",
+  "in": "art"
+ },
+ "ER": {
+  "nome": "Eritrea",
+  "art": "l'",
+  "in": "in"
+ },
+ "EN": {
+  "nome": "Estonia",
+  "art": "l'",
+  "in": "in"
+ },
+ "WZ": {
+  "nome": "Eswatini",
+  "art": "l'",
+  "in": "in"
+ },
+ "ET": {
+  "nome": "Etiopia",
+  "art": "l'",
+  "in": "in"
+ },
+ "FJ": {
+  "nome": "Figi",
+  "art": "le",
+  "in": "art"
+ },
+ "RP": {
+  "nome": "Filippine",
+  "art": "le",
+  "in": "art"
+ },
+ "FI": {
+  "nome": "Finlandia",
+  "art": "la",
+  "in": "in"
+ },
+ "FR": {
+  "nome": "Francia",
+  "art": "la",
+  "in": "in"
+ },
+ "GB": {
+  "nome": "Gabon",
+  "art": "il",
+  "in": "in"
+ },
+ "GA": {
+  "nome": "Gambia",
+  "art": "il",
+  "in": "in"
+ },
+ "GG": {
+  "nome": "Georgia",
+  "art": "la",
+  "in": "in"
+ },
+ "SX": {
+  "nome": "Georgia del Sud e Sandwich Australi",
+  "art": "la",
+  "in": "art"
+ },
+ "GM": {
+  "nome": "Germania",
+  "art": "la",
+  "in": "in"
+ },
+ "DDDE": {
+  "nome": "Germania Est",
+  "art": "la",
+  "in": "in"
+ },
+ "GH": {
+  "nome": "Ghana",
+  "art": "il",
+  "in": "in"
+ },
+ "JM": {
+  "nome": "Giamaica",
+  "art": "la",
+  "in": "in"
+ },
+ "JA": {
+  "nome": "Giappone",
+  "art": "il",
+  "in": "in"
+ },
+ "GI": {
+  "nome": "Gibilterra",
+  "art": "",
+  "in": "a"
+ },
+ "DJ": {
+  "nome": "Gibuti",
+  "art": "",
+  "in": "a"
+ },
+ "JO": {
+  "nome": "Giordania",
+  "art": "la",
+  "in": "in"
+ },
+ "GR": {
+  "nome": "Grecia",
+  "art": "la",
+  "in": "in"
+ },
+ "GJ": {
+  "nome": "Grenada",
+  "art": "",
+  "in": "a"
+ },
+ "GL": {
+  "nome": "Groenlandia",
+  "art": "la",
+  "in": "in"
+ },
+ "GP": {
+  "nome": "Guadalupa",
+  "art": "la",
+  "in": "in"
+ },
+ "GQ": {
+  "nome": "Guam",
+  "art": "",
+  "in": "a"
+ },
+ "GT": {
+  "nome": "Guatemala",
+  "art": "il",
+  "in": "in"
+ },
+ "GK": {
+  "nome": "Guernsey",
+  "art": "",
+  "in": "a"
+ },
+ "GV": {
+  "nome": "Guinea",
+  "art": "la",
+  "in": "in"
+ },
+ "EK": {
+  "nome": "Guinea Equatoriale",
+  "art": "la",
+  "in": "in"
+ },
+ "PU": {
+  "nome": "Guinea-Bissau",
+  "art": "la",
+  "in": "in"
+ },
+ "GY": {
+  "nome": "Guyana",
+  "art": "la",
+  "in": "in"
+ },
+ "FG": {
+  "nome": "Guyana Francese",
+  "art": "la",
+  "in": "in"
+ },
+ "HA": {
+  "nome": "Haiti",
+  "art": "",
+  "in": "a"
+ },
+ "HO": {
+  "nome": "Honduras",
+  "art": "l'",
+  "in": "in"
+ },
+ "HK": {
+  "nome": "Hong Kong",
+  "art": "",
+  "in": "a"
+ },
+ "IN": {
+  "nome": "India",
+  "art": "l'",
+  "in": "in"
+ },
+ "ID": {
+  "nome": "Indonesia",
+  "art": "l'",
+  "in": "in"
+ },
+ "IR": {
+  "nome": "Iran",
+  "art": "l'",
+  "in": "in"
+ },
+ "IZ": {
+  "nome": "Iraq",
+  "art": "l'",
+  "in": "in"
+ },
+ "EI": {
+  "nome": "Irlanda",
+  "art": "l'",
+  "in": "in"
+ },
+ "IC": {
+  "nome": "Islanda",
+  "art": "l'",
+  "in": "in"
+ },
+ "FQ": {
+  "nome": "Isola Baker",
+  "art": "l'",
+  "in": "art"
+ },
+ "BV": {
+  "nome": "Isola Bouvet",
+  "art": "l'",
+  "in": "art"
+ },
+ "KT": {
+  "nome": "Isola Christmas",
+  "art": "l'",
+  "in": "art"
+ },
+ "EU": {
+  "nome": "Isola Europa",
+  "art": "l'",
+  "in": "art"
+ },
+ "HQ": {
+  "nome": "Isola Howland",
+  "art": "l'",
+  "in": "art"
+ },
+ "DQ": {
+  "nome": "Isola Jarvis",
+  "art": "l'",
+  "in": "art"
+ },
+ "JU": {
+  "nome": "Isola Juan de Nova",
+  "art": "l'",
+  "in": "art"
+ },
+ "BQ": {
+  "nome": "Isola Navassa",
+  "art": "l'",
+  "in": "art"
+ },
+ "NF": {
+  "nome": "Isola Norfolk",
+  "art": "l'",
+  "in": "art"
+ },
+ "TE": {
+  "nome": "Isola Tromelin",
+  "art": "l'",
+  "in": "art"
+ },
+ "IP": {
+  "nome": "Isola di Clipperton",
+  "art": "l'",
+  "in": "art"
+ },
+ "IM": {
+  "nome": "Isola di Man",
+  "art": "l'",
+  "in": "art"
+ },
+ "WQ": {
+  "nome": "Isola di Wake",
+  "art": "l'",
+  "in": "art"
+ },
+ "AT": {
+  "nome": "Isole Ashmore e Cartier",
+  "art": "le",
+  "in": "art"
+ },
+ "CJ": {
+  "nome": "Isole Cayman",
+  "art": "le",
+  "in": "art"
+ },
+ "CK": {
+  "nome": "Isole Cocos (Keeling)",
+  "art": "le",
+  "in": "art"
+ },
+ "CW": {
+  "nome": "Isole Cook",
+  "art": "le",
+  "in": "art"
+ },
+ "FK": {
+  "nome": "Isole Falkland",
+  "art": "le",
+  "in": "art"
+ },
+ "FO": {
+  "nome": "Isole Fær Øer",
+  "art": "le",
+  "in": "art"
+ },
+ "GO": {
+  "nome": "Isole Gloriose",
+  "art": "le",
+  "in": "art"
+ },
+ "HM": {
+  "nome": "Isole Heard e McDonald",
+  "art": "le",
+  "in": "art"
+ },
+ "CQ": {
+  "nome": "Isole Marianne Settentrionali",
+  "art": "le",
+  "in": "art"
+ },
+ "RM": {
+  "nome": "Isole Marshall",
+  "art": "le",
+  "in": "art"
+ },
+ "MQ": {
+  "nome": "Isole Midway",
+  "art": "le",
+  "in": "art"
+ },
+ "PF": {
+  "nome": "Isole Paracel",
+  "art": "le",
+  "in": "art"
+ },
+ "PC": {
+  "nome": "Isole Pitcairn",
+  "art": "le",
+  "in": "art"
+ },
+ "BP": {
+  "nome": "Isole Salomone",
+  "art": "le",
+  "in": "art"
+ },
+ "PG": {
+  "nome": "Isole Spratly",
+  "art": "le",
+  "in": "art"
+ },
+ "TK": {
+  "nome": "Isole Turks e Caicos",
+  "art": "le",
+  "in": "art"
+ },
+ "VQ": {
+  "nome": "Isole Vergini Americane",
+  "art": "le",
+  "in": "art"
+ },
+ "VI": {
+  "nome": "Isole Vergini Britanniche",
+  "art": "le",
+  "in": "art"
+ },
+ "CR": {
+  "nome": "Isole del Mar dei Coralli",
+  "art": "le",
+  "in": "art"
+ },
+ "PCHH": {
+  "nome": "Isole del Pacifico",
+  "art": "le",
+  "in": "art"
+ },
+ "UM": {
+  "nome": "Isole del Pacifico statunitensi",
+  "art": "le",
+  "in": "art"
+ },
+ "IS": {
+  "nome": "Israele",
+  "art": "",
+  "in": "in"
+ },
+ "IT": {
+  "nome": "Italia",
+  "art": "l'",
+  "in": "in"
+ },
+ "JN": {
+  "nome": "Jan Mayen",
+  "art": "",
+  "in": "a"
+ },
+ "JE": {
+  "nome": "Jersey",
+  "art": "",
+  "in": "a"
+ },
+ "YUCS": {
+  "nome": "Jugoslavia",
+  "art": "la",
+  "in": "in"
+ },
+ "KZ": {
+  "nome": "Kazakistan",
+  "art": "il",
+  "in": "in"
+ },
+ "KE": {
+  "nome": "Kenya",
+  "art": "il",
+  "in": "in"
+ },
+ "KG": {
+  "nome": "Kirghizistan",
+  "art": "il",
+  "in": "in"
+ },
+ "KR": {
+  "nome": "Kiribati",
+  "art": "",
+  "in": "a"
+ },
+ "KV": {
+  "nome": "Kosovo",
+  "art": "il",
+  "in": "art"
+ },
+ "KU": {
+  "nome": "Kuwait",
+  "art": "il",
+  "in": "in"
+ },
+ "LA": {
+  "nome": "Laos",
+  "art": "il",
+  "in": "in"
+ },
+ "LT": {
+  "nome": "Lesotho",
+  "art": "il",
+  "in": "in"
+ },
+ "LG": {
+  "nome": "Lettonia",
+  "art": "la",
+  "in": "in"
+ },
+ "LE": {
+  "nome": "Libano",
+  "art": "il",
+  "in": "art"
+ },
+ "LI": {
+  "nome": "Liberia",
+  "art": "la",
+  "in": "in"
+ },
+ "LY": {
+  "nome": "Libia",
+  "art": "la",
+  "in": "in"
+ },
+ "LS": {
+  "nome": "Liechtenstein",
+  "art": "il",
+  "in": "in"
+ },
+ "LH": {
+  "nome": "Lituania",
+  "art": "la",
+  "in": "in"
+ },
+ "LU": {
+  "nome": "Lussemburgo",
+  "art": "il",
+  "in": "in"
+ },
+ "MC": {
+  "nome": "Macao",
+  "art": "",
+  "in": "a"
+ },
+ "MK": {
+  "nome": "Macedonia del Nord",
+  "art": "la",
+  "in": "in"
+ },
+ "MA": {
+  "nome": "Madagascar",
+  "art": "",
+  "in": "in"
+ },
+ "MI": {
+  "nome": "Malawi",
+  "art": "il",
+  "in": "in"
+ },
+ "MY": {
+  "nome": "Malaysia",
+  "art": "la",
+  "in": "in"
+ },
+ "MV": {
+  "nome": "Maldive",
+  "art": "le",
+  "in": "art"
+ },
+ "ML": {
+  "nome": "Mali",
+  "art": "il",
+  "in": "in"
+ },
+ "MT": {
+  "nome": "Malta",
+  "art": "",
+  "in": "a"
+ },
+ "MO": {
+  "nome": "Marocco",
+  "art": "il",
+  "in": "in"
+ },
+ "MB": {
+  "nome": "Martinica",
+  "art": "la",
+  "in": "in"
+ },
+ "MR": {
+  "nome": "Mauritania",
+  "art": "la",
+  "in": "in"
+ },
+ "MP": {
+  "nome": "Mauritius",
+  "art": "",
+  "in": "a"
+ },
+ "MF": {
+  "nome": "Mayotte",
+  "art": "",
+  "in": "a"
+ },
+ "MX": {
+  "nome": "Messico",
+  "art": "il",
+  "in": "in"
+ },
+ "FM": {
+  "nome": "Micronesia",
+  "art": "la",
+  "in": "in"
+ },
+ "MD": {
+  "nome": "Moldavia",
+  "art": "la",
+  "in": "in"
+ },
+ "MN": {
+  "nome": "Monaco",
+  "art": "",
+  "in": "a"
+ },
+ "MG": {
+  "nome": "Mongolia",
+  "art": "la",
+  "in": "in"
+ },
+ "MJ": {
+  "nome": "Montenegro",
+  "art": "il",
+  "in": "in"
+ },
+ "MH": {
+  "nome": "Montserrat",
+  "art": "",
+  "in": "a"
+ },
+ "MZ": {
+  "nome": "Mozambico",
+  "art": "il",
+  "in": "in"
+ },
+ "BM": {
+  "nome": "Myanmar",
+  "art": "il",
+  "in": "in"
+ },
+ "WA": {
+  "nome": "Namibia",
+  "art": "la",
+  "in": "in"
+ },
+ "NR": {
+  "nome": "Nauru",
+  "art": "",
+  "in": "a"
+ },
+ "NP": {
+  "nome": "Nepal",
+  "art": "il",
+  "in": "in"
+ },
+ "NU": {
+  "nome": "Nicaragua",
+  "art": "il",
+  "in": "in"
+ },
+ "NG": {
+  "nome": "Niger",
+  "art": "il",
+  "in": "in"
+ },
+ "NI": {
+  "nome": "Nigeria",
+  "art": "la",
+  "in": "in"
+ },
+ "NE": {
+  "nome": "Niue",
+  "art": "",
+  "in": "a"
+ },
+ "NO": {
+  "nome": "Norvegia",
+  "art": "la",
+  "in": "in"
+ },
+ "NC": {
+  "nome": "Nuova Caledonia",
+  "art": "la",
+  "in": "in"
+ },
+ "NZ": {
+  "nome": "Nuova Zelanda",
+  "art": "la",
+  "in": "in"
+ },
+ "MU": {
+  "nome": "Oman",
+  "art": "l'",
+  "in": "in"
+ },
+ "NL": {
+  "nome": "Paesi Bassi",
+  "art": "i",
+  "in": "art"
+ },
+ "PK": {
+  "nome": "Pakistan",
+  "art": "il",
+  "in": "in"
+ },
+ "PS": {
+  "nome": "Palau",
+  "art": "",
+  "in": "a"
+ },
+ "PM": {
+  "nome": "Panama",
+  "art": "il",
+  "in": "in"
+ },
+ "PP": {
+  "nome": "Papua Nuova Guinea",
+  "art": "la",
+  "in": "in"
+ },
+ "PA": {
+  "nome": "Paraguay",
+  "art": "il",
+  "in": "in"
+ },
+ "PE": {
+  "nome": "Perù",
+  "art": "il",
+  "in": "in"
+ },
+ "FP": {
+  "nome": "Polinesia Francese",
+  "art": "la",
+  "in": "in"
+ },
+ "PL": {
+  "nome": "Polonia",
+  "art": "la",
+  "in": "in"
+ },
+ "PO": {
+  "nome": "Portogallo",
+  "art": "il",
+  "in": "in"
+ },
+ "RQ": {
+  "nome": "Portorico",
+  "art": "",
+  "in": "a"
+ },
+ "QA": {
+  "nome": "Qatar",
+  "art": "il",
+  "in": "in"
+ },
+ "KQ": {
+  "nome": "Reef Kingman",
+  "art": "il",
+  "in": "art"
+ },
+ "UK": {
+  "nome": "Regno Unito",
+  "art": "il",
+  "in": "art"
+ },
+ "EZ": {
+  "nome": "Repubblica Ceca",
+  "art": "la",
+  "in": "art"
+ },
+ "CT": {
+  "nome": "Repubblica Centrafricana",
+  "art": "la",
+  "in": "art"
+ },
+ "CG": {
+  "nome": "Repubblica Democratica del Congo",
+  "art": "la",
+  "in": "art"
+ },
+ "DR": {
+  "nome": "Repubblica Dominicana",
+  "art": "la",
+  "in": "art"
+ },
+ "RE": {
+  "nome": "Riunione",
+  "art": "la",
+  "in": "art"
+ },
+ "RO": {
+  "nome": "Romania",
+  "art": "la",
+  "in": "in"
+ },
+ "RW": {
+  "nome": "Ruanda",
+  "art": "il",
+  "in": "in"
+ },
+ "RS": {
+  "nome": "Russia",
+  "art": "la",
+  "in": "in"
+ },
+ "WI": {
+  "nome": "Sahara Occidentale",
+  "art": "il",
+  "in": "art"
+ },
+ "SC": {
+  "nome": "Saint Kitts e Nevis",
+  "art": "",
+  "in": "a"
+ },
+ "ST": {
+  "nome": "Saint Lucia",
+  "art": "",
+  "in": "a"
+ },
+ "RN": {
+  "nome": "Saint Martin",
+  "art": "",
+  "in": "a"
+ },
+ "VC": {
+  "nome": "Saint Vincent e Grenadine",
+  "art": "",
+  "in": "a"
+ },
+ "TB": {
+  "nome": "Saint-Barthélemy",
+  "art": "",
+  "in": "a"
+ },
+ "SB": {
+  "nome": "Saint-Pierre e Miquelon",
+  "art": "",
+  "in": "a"
+ },
+ "WS": {
+  "nome": "Samoa",
+  "art": "",
+  "in": "a"
+ },
+ "AQ": {
+  "nome": "Samoa Americane",
+  "art": "le",
+  "in": "art"
+ },
+ "SM": {
+  "nome": "San Marino",
+  "art": "",
+  "in": "a"
+ },
+ "SH": {
+  "nome": "Sant’Elena",
+  "art": "",
+  "in": "a"
+ },
+ "SG": {
+  "nome": "Senegal",
+  "art": "il",
+  "in": "in"
+ },
+ "RI": {
+  "nome": "Serbia",
+  "art": "la",
+  "in": "in"
+ },
+ "YI": {
+  "nome": "Serbia e Montenegro",
+  "art": "la",
+  "in": "art"
+ },
+ "SE": {
+  "nome": "Seychelles",
+  "art": "le",
+  "in": "art"
+ },
+ "SL": {
+  "nome": "Sierra Leone",
+  "art": "la",
+  "in": "in"
+ },
+ "SN": {
+  "nome": "Singapore",
+  "art": "",
+  "in": "a"
+ },
+ "NN": {
+  "nome": "Sint Maarten",
+  "art": "",
+  "in": "a"
+ },
+ "SY": {
+  "nome": "Siria",
+  "art": "la",
+  "in": "in"
+ },
+ "LO": {
+  "nome": "Slovacchia",
+  "art": "la",
+  "in": "in"
+ },
+ "SI": {
+  "nome": "Slovenia",
+  "art": "la",
+  "in": "in"
+ },
+ "SO": {
+  "nome": "Somalia",
+  "art": "la",
+  "in": "in"
+ },
+ "SP": {
+  "nome": "Spagna",
+  "art": "la",
+  "in": "in"
+ },
+ "CE": {
+  "nome": "Sri Lanka",
+  "art": "lo",
+  "in": "art"
+ },
+ "US": {
+  "nome": "Stati Uniti",
+  "art": "gli",
+  "in": "art"
+ },
+ "GZ": {
+  "nome": "Striscia di Gaza",
+  "art": "la",
+  "in": "art"
+ },
+ "OD": {
+  "nome": "Sud Sudan",
+  "art": "il",
+  "in": "in"
+ },
+ "SF": {
+  "nome": "Sudafrica",
+  "art": "il",
+  "in": "in"
+ },
+ "SU": {
+  "nome": "Sudan",
+  "art": "il",
+  "in": "in"
+ },
+ "NS": {
+  "nome": "Suriname",
+  "art": "il",
+  "in": "in"
+ },
+ "SV": {
+  "nome": "Svalbard",
+  "art": "le",
+  "in": "art"
+ },
+ "SW": {
+  "nome": "Svezia",
+  "art": "la",
+  "in": "in"
+ },
+ "SZ": {
+  "nome": "Svizzera",
+  "art": "la",
+  "in": "in"
+ },
+ "TP": {
+  "nome": "São Tomé e Príncipe",
+  "art": "",
+  "in": "a"
+ },
+ "TI": {
+  "nome": "Tagikistan",
+  "art": "il",
+  "in": "in"
+ },
+ "TW": {
+  "nome": "Taiwan",
+  "art": "",
+  "in": "a"
+ },
+ "TZ": {
+  "nome": "Tanzania",
+  "art": "la",
+  "in": "in"
+ },
+ "FS": {
+  "nome": "Terre Australi Francesi",
+  "art": "le",
+  "in": "art"
+ },
+ "IO": {
+  "nome": "Territorio Britannico dell’Oceano Indiano",
+  "art": "il",
+  "in": "art"
+ },
+ "TH": {
+  "nome": "Thailandia",
+  "art": "la",
+  "in": "in"
+ },
+ "TT": {
+  "nome": "Timor Est",
+  "art": "",
+  "in": "a"
+ },
+ "TO": {
+  "nome": "Togo",
+  "art": "il",
+  "in": "in"
+ },
+ "TL": {
+  "nome": "Tokelau",
+  "art": "",
+  "in": "a"
+ },
+ "TN": {
+  "nome": "Tonga",
+  "art": "",
+  "in": "a"
+ },
+ "TD": {
+  "nome": "Trinidad e Tobago",
+  "art": "",
+  "in": "a"
+ },
+ "TS": {
+  "nome": "Tunisia",
+  "art": "la",
+  "in": "in"
+ },
+ "TU": {
+  "nome": "Turchia",
+  "art": "la",
+  "in": "in"
+ },
+ "TX": {
+  "nome": "Turkmenistan",
+  "art": "il",
+  "in": "in"
+ },
+ "TV": {
+  "nome": "Tuvalu",
+  "art": "",
+  "in": "a"
+ },
+ "UP": {
+  "nome": "Ucraina",
+  "art": "l'",
+  "in": "in"
+ },
+ "UG": {
+  "nome": "Uganda",
+  "art": "l'",
+  "in": "in"
+ },
+ "HU": {
+  "nome": "Ungheria",
+  "art": "l'",
+  "in": "in"
+ },
+ "SUHH": {
+  "nome": "Unione Sovietica",
+  "art": "l'",
+  "in": "art"
+ },
+ "UY": {
+  "nome": "Uruguay",
+  "art": "l'",
+  "in": "in"
+ },
+ "UZ": {
+  "nome": "Uzbekistan",
+  "art": "l'",
+  "in": "in"
+ },
+ "NH": {
+  "nome": "Vanuatu",
+  "art": "",
+  "in": "a"
+ },
+ "VE": {
+  "nome": "Venezuela",
+  "art": "il",
+  "in": "in"
+ },
+ "VM": {
+  "nome": "Vietnam",
+  "art": "il",
+  "in": "in"
+ },
+ "WF": {
+  "nome": "Wallis e Futuna",
+  "art": "",
+  "in": "a"
+ },
+ "YM": {
+  "nome": "Yemen",
+  "art": "lo",
+  "in": "in"
+ },
+ "YEYE": {
+  "nome": "Yemen del Nord",
+  "art": "lo",
+  "in": "art"
+ },
+ "YDYE": {
+  "nome": "Yemen del Sud",
+  "art": "lo",
+  "in": "art"
+ },
+ "ZA": {
+  "nome": "Zambia",
+  "art": "lo",
+  "in": "in"
+ },
+ "ZI": {
+  "nome": "Zimbabwe",
+  "art": "lo",
+  "in": "in"
+ },
+ "NTHH": {
+  "nome": "Zona neutrale",
+  "art": "la",
+  "in": "art"
+ }
+}

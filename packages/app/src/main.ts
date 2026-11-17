@@ -12,17 +12,17 @@ import {
 } from "@melchior/ui";
 import testi from "./testi/it.json";
 import { GameAudio, type SoundName } from "./audio.js";
+import { forme, maiuscola, parametri, voce, type Forme } from "./paesi.js";
+import { fill } from "./testo.js";
 
 type PackCountry = ScenarioPack["countries"][number];
 
 // Nomi italiani: dal codice ISO tramite Intl; gli stati scomparsi non hanno un ISO attuale.
 const regionNames = new Intl.DisplayNames(["it"], { type: "region" });
-const DISSOLVED: Record<string, string> = {
-  SUHH: "Unione Sovietica", DDDE: "Germania Est", CSHH: "Cecoslovacchia", YUCS: "Jugoslavia",
-  YEYE: "Yemen del Nord", YDYE: "Yemen del Sud", NTHH: "Zona neutrale", PCHH: "Isole del Pacifico",
-};
+/** Nome italiano: dalla tabella dei paesi; per un codice che non c'è, da Intl o dal Factbook. */
 function italianName(c: PackCountry): string {
-  if (DISSOLVED[c.code]) return DISSOLVED[c.code]!;
+  const v = voce(c.code);
+  if (v) return v.nome;
   try {
     const n = c.iso2 ? regionNames.of(c.iso2) : undefined;
     if (n && n !== c.iso2) return n;
@@ -45,7 +45,6 @@ const money = (x: number | null): string => {
   return `${num.format(x)} $`;
 };
 const pct = (x: number) => `${dec.format(x * 100)}%`;
-const fill = (t: string, p: Record<string, string>) => t.replace(/\{(\w+)\}/g, (_, k: string) => p[k] ?? "");
 
 const canvas = document.getElementById("schermo") as HTMLCanvasElement;
 const screen = new Screen(canvas, defaultPalette());
@@ -56,6 +55,9 @@ const theme = DEFAULT_THEME;
 let pack: ScenarioPack | null = null;
 let sim: Simulation | null = null;
 let names: string[] = [];
+let nameForms: Forme[] = [];      // nomi con articoli e preposizioni, per le frasi
+/** Parametri di testo di un paese ({radice}, {radice_il}, {radice_di}, …), vuoti se manca. */
+const np = (radice: string, i?: number) => parametri(radice, i !== undefined && i >= 0 ? nameForms[i] : undefined);
 let order: number[] = [];       // indici dei paesi ordinati per PIL
 let selected = 0;
 let top = 0;
@@ -154,7 +156,8 @@ async function preparePack(year: number): Promise<ScenarioPack> {
   const res = await fetch(`${import.meta.env.BASE_URL}scenarios/${year}.json`);
   if (!res.ok) throw new Error(String(res.status));
   const p = (await res.json()) as ScenarioPack;
-  names = p.countries.map(italianName);
+  nameForms = p.countries.map((c) => forme(voce(c.code), italianName(c)));
+  names = nameForms.map((f) => f.nome);
   if (!carta) await loadMap();
   if (!Object.keys(portraits).length) await loadPortraits();
   owners = carta ? tileOwners(carta.tiles, p.countries.map((c) => c.code), p.lineage ?? [], year) : [];
@@ -345,61 +348,64 @@ function reportText(r: Report): string {
   const country = r.country !== undefined ? names[r.country] ?? "" : "";
   const actor = r.actor !== undefined ? names[r.actor] ?? "" : "";
   const stage = r.stage ? testi.stadi[r.stage - 1] ?? "" : "";
+  const ctx = { ...np("paese", r.country), ...np("attore", r.actor), ...np("colpevole", r.actor) };
+  /** Frase con i nomi dei paesi (articoli e preposizioni) e la maiuscola iniziale. */
+  const f = (t: string, p: Record<string, string> = {}) => maiuscola(fill(t, { ...ctx, ...p }));
   switch (r.key) {
     case "endOfMonth": return testi.fineMese;
     case "endOfYear": return testi.fineAnno;
-    case "socialHappened": return fill(testi.socialeAvvenuto, { paese: country, stadio: stage.charAt(0).toUpperCase() + stage.slice(1) });
-    case "socialSuppressed": return fill(testi.socialeRepresso, { paese: country, stadio: stage });
-    case "regimeChange": return fill(testi.cambioRegime, { paese: country });
+    case "socialHappened": return f(testi.socialeAvvenuto, { paese: country, stadio: stage.charAt(0).toUpperCase() + stage.slice(1) });
+    case "socialSuppressed": return f(testi.socialeRepresso, { paese: country, stadio: stage });
+    case "regimeChange": return f(testi.cambioRegime, { paese: country });
     case "playerKilled": return testi.presidenteUcciso;
     case "playerOusted": return testi.presidenteDestituito;
     case "playerConquered": return testi.paeseConquistato;
     case "actionSucceeded":
     case "actionFailed":
-      return fill(r.key === "actionSucceeded" ? testi.azioneRiuscita : testi.azioneFallita,
+      return f(r.key === "actionSucceeded" ? testi.azioneRiuscita : testi.azioneFallita,
         { azione: testi.azioni[r.action ?? 0] ?? "", paese: country });
     case "aiActionSucceeded":
     case "aiActionFailed":
-      return fill(r.key === "aiActionSucceeded" ? testi.azioneIaRiuscita : testi.azioneIaFallita,
+      return f(r.key === "aiActionSucceeded" ? testi.azioneIaRiuscita : testi.azioneIaFallita,
         { attore: actor, azione: aiActionName(r.action ?? 0), paese: country });
     case "reactionPrevented":
     case "reactionFailed":
-      return fill(r.key === "reactionPrevented" ? testi.reazioneRiuscita : testi.reazioneFallita,
+      return f(r.key === "reactionPrevented" ? testi.reazioneRiuscita : testi.reazioneFallita,
         { reazione: (testi.reazioni[r.reaction ?? 0] ?? "").toLowerCase(), attore: actor, paese: country });
-    case "sanctionsVetoed": return fill(testi.vetoSanzioni, { attore: actor });
+    case "sanctionsVetoed": return f(testi.vetoSanzioni, { attore: actor });
     case "proposalAccepted":
     case "proposalRefused":
-      return fill(r.key === "proposalAccepted" ? testi.propostaAccettata : testi.propostaRespinta,
+      return f(r.key === "proposalAccepted" ? testi.propostaAccettata : testi.propostaRespinta,
         { attore: actor, azione: aiActionName(r.action ?? 0) });
-    case "electionWon": return fill(testi.rielezione, { n: String(r.stage ?? 2) });
-    case "electionLost": return fill(testi.sconfittaElettorale, { v: String(r.stage ?? 0) });
+    case "electionWon": return f(testi.rielezione, { n: String(r.stage ?? 2) });
+    case "electionLost": return f(testi.sconfittaElettorale, { v: String(r.stage ?? 0) });
     case "termsCompleted": return testi.mandatiCompleti;
     case "disaster": {
       const p = {
         tipo: testi.disastri[r.stage ?? 0] ?? "", dir: testi.direzioni[r.action ?? 0] ?? "", paese: country,
         vittime: num.format(r.value ?? 0), danni: money(r.value2 ?? 0), m: dec.format(r.value3 ?? 0),
       };
-      const base = fill(r.stage === 1 ? testi.notiziaTerremoto : testi.notiziaDisastro, p);
-      return r.actor !== undefined ? base + fill(testi.colpevole, { colpevole: actor }) : base;
+      const base = f(r.stage === 1 ? testi.notiziaTerremoto : testi.notiziaDisastro, p);
+      return r.actor !== undefined ? base + f(testi.colpevole, { colpevole: actor }) : base;
     }
-    case "troopsApproaching": return fill(testi.truppeAlConfine, { attore: actor, paese: country });
-    case "troopsDeployed": return fill(testi.truppeSchierate, { attore: actor, paese: country });
-    case "troopsIncreased": return fill(testi.truppeAumentate, { attore: actor, paese: country });
-    case "deployRefused": return fill(testi.schieramentoRifiutato, { attore: actor, paese: country });
-    case "warJoined": return fill(testi.entraInGuerra, { attore: actor, paese: country });
-    case "troopsSurrendered": return fill(testi.truppeArrese, { attore: actor, paese: country });
+    case "troopsApproaching": return f(testi.truppeAlConfine, { attore: actor, paese: country });
+    case "troopsDeployed": return f(testi.truppeSchierate, { attore: actor, paese: country });
+    case "troopsIncreased": return f(testi.truppeAumentate, { attore: actor, paese: country });
+    case "deployRefused": return f(testi.schieramentoRifiutato, { attore: actor, paese: country });
+    case "warJoined": return f(testi.entraInGuerra, { attore: actor, paese: country });
+    case "troopsSurrendered": return f(testi.truppeArrese, { attore: actor, paese: country });
     case "mobilization": return testi.mobilitazione;
     case "playerConquered": return testi.paeseConquistato;
-    case "nuclearStrike": return fill(testi.attaccoNucleare, { attore: actor, paese: country });
-    case "nuclearFallout": return fill(testi.ricaduta, { n: String(r.stage ?? 0), paese: country });
+    case "nuclearStrike": return f(testi.attaccoNucleare, { attore: actor, paese: country });
+    case "nuclearFallout": return f(testi.ricaduta, { n: String(r.stage ?? 0), paese: country });
     case "nuclearWinter": return testi.invernoNucleare;
-    case "nuclearAlert": return fill(testi.allertaNucleare, { attore: actor, paese: country });
-    case "warStarted": return fill(testi.guerraIniziata, { attore: actor, paese: country });
-    case "warWon": return fill(testi.guerraVinta, { attore: actor, paese: country });
-    case "warRepelled": return fill(testi.guerraRespinta, { attore: actor, paese: country });
-    case "peaceNegotiated": return fill(testi.paceNegoziata, { attore: actor, paese: country });
-    case "ciaWarning": return fill(testi.avvisoCia, { attore: actor, paese: country });
-    case "militaryExercises": return fill(testi.esercitazioni, { attore: actor, paese: country });
+    case "nuclearAlert": return f(testi.allertaNucleare, { attore: actor, paese: country });
+    case "warStarted": return f(testi.guerraIniziata, { attore: actor, paese: country });
+    case "warWon": return f(testi.guerraVinta, { attore: actor, paese: country });
+    case "warRepelled": return f(testi.guerraRespinta, { attore: actor, paese: country });
+    case "peaceNegotiated": return f(testi.paceNegoziata, { attore: actor, paese: country });
+    case "ciaWarning": return f(testi.avvisoCia, { attore: actor, paese: country });
+    case "militaryExercises": return f(testi.esercitazioni, { attore: actor, paese: country });
   }
 }
 
@@ -508,7 +514,7 @@ function chance(code: number, target: number): number | null {
 function renderMenu(): void {
   const target = order[selected];
   if (!sim || menu === null || target === undefined) return;
-  const area = drawWindow(fb, font, theme, 8, 40, 624, 330, fill(testi.menuAzioni, { paese: names[target]! }));
+  const area = drawWindow(fb, font, theme, 8, 40, 624, 330, fill(testi.menuAzioni, { ...np("paese", target) }));
   const colW = Math.floor(area.w / 2);
   const columns = [ACTIONS.slice(0, MENU_SPLIT), ACTIONS.slice(MENU_SPLIT)];
   columns.forEach((list, col) => {
@@ -545,7 +551,7 @@ function renderChoice(): void {
   const options = p.kind === "reaction" ? testi.reazioni : p.kind === "surrender" ? testi.scelteResa : testi.scelteProposta;
   const h = CELL_H * (options.length + (p.kind === "reaction" ? 7 : 5)) + 16;
   const title = p.kind === "reaction" ? testi.titoloReazione : p.kind === "surrender" ? testi.titoloResa
-    : fill(testi.titoloProposta, { attore: names[p.actor]! });
+    : fill(testi.titoloProposta, { ...np("attore", p.actor) });
   const area = drawWindow(fb, font, theme, 120, 120, 400, h, title);
   let y = area.y + 2;
   // le righe lunghe vanno a capo (al massimo due righe)
@@ -556,18 +562,18 @@ function renderChoice(): void {
     }
   };
   if (p.kind === "reaction") {
-    line(fill(testi.testoReazione, { attore: names[p.actor]!, azione: aiActionName(p.code) }), theme.textHighlight);
-    line(fill(testi.bersaglio, { paese: names[p.target]! }), theme.text);
+    line(fill(testi.testoReazione, { ...np("attore", p.actor), azione: aiActionName(p.code) }), theme.textHighlight);
+    line(fill(testi.bersaglio, { ...np("paese", p.target) }), theme.text);
     const us = sim.world.countries[sim.player]!;
     const them = sim.world.countries[p.actor]!;
-    line(fill(testi.lerConfronto, { paese: names[sim.player]!, valore: pct(us.ler) }), theme.textDim);
-    line(fill(testi.lerConfronto, { paese: names[p.actor]!, valore: pct(them.ler) }), theme.textDim);
+    line(fill(testi.lerConfronto, { ...np("paese", sim.player), valore: pct(us.ler) }), theme.textDim);
+    line(fill(testi.lerConfronto, { ...np("paese", p.actor), valore: pct(them.ler) }), theme.textDim);
   } else if (p.kind === "surrender") {
     const war = sim.world.wars.find((x) => x.id === p.war);
-    line(fill(testi.testoResa, { attore: names[p.actor]! }), theme.textHighlight);
+    line(fill(testi.testoResa, { ...np("attore", p.actor) }), theme.textHighlight);
     if (war) line(fill(testi.testoResa2, { truppe: num.format(Math.round(war.sides[1].troops)), morti: num.format(Math.round(war.sides[1].totalDead)) }), theme.text);
   } else {
-    line(fill(testi.testoProposta, { attore: names[p.actor]!, azione: aiActionName(p.code) }), theme.textHighlight);
+    line(fill(testi.testoProposta, { ...np("attore", p.actor), azione: aiActionName(p.code) }), theme.textHighlight);
   }
   y += 4;
   options.forEach((o, k) => {
@@ -664,13 +670,13 @@ function advisorText(l: AdvisorLine, news: Report[]): string {
   const v = l.value ?? 0;
   const v2 = l.value2 ?? 0;
   const t = (testi.rapporti as Record<string, string>)[l.key] ?? l.key;
-  return fill(t, {
-    paese: name(l.country), altro: name(l.other),
+  return maiuscola(fill(t, {
+    paese: name(l.country), altro: name(l.other), ...np("paese", l.country), ...np("altro", l.other),
     v: dec.format(v), v0: num.format(v), vp: pct(v), v2: dec.format(v2), pv2: pct(v2), soldi2: money(v2),
     umore: testi.umori[v - 1] ?? "", azione: aiActionName(v), tipo: (testi.disastri[v2] ?? "").toLowerCase(),
     squadra: v ? fill(testi.squadraN, { n: String(v) }) : testi.nessunaSquadra,
     coalizione: [l.country, l.other].filter((i) => i !== undefined && i >= 0).map(name).join(" + ") || "-",
-  });
+  }));
 }
 
 function renderAdvisor(): void {
@@ -681,8 +687,8 @@ function renderAdvisor(): void {
   // la riunione copre per intero il menu delle azioni da cui si apre
   const area = drawWindow(fb, font, theme, 8, 28, 624, view.kind === "report" ? 300 : 346,
     view.kind === "report"
-      ? fill(testi.rapportoTitolo, { ruolo: testi.consiglieri[view.who].ruolo, paese: names[target]! })
-      : fill(testi.riunione, { azione: testi.azioni[view.code] ?? "", paese: names[target]! }));
+      ? fill(testi.rapportoTitolo, { ruolo: testi.consiglieri[view.who].ruolo, ...np("paese", target) })
+      : fill(testi.riunione, { azione: testi.azioni[view.code] ?? "", ...np("paese", target) }));
   const cols = Math.floor((area.w - PORTRAIT - 40) / 8);
   if (view.kind === "report") {
     drawPortrait(view.who, area.x + 6, area.y + 6);
