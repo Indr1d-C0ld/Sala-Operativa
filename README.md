@@ -64,11 +64,11 @@ Quando arriva un allarme, una proposta o la resa, il tempo si ferma finché non 
 Servono **Node.js 22** o successivo e **Python 3** (solo per rigenerare gli scenari).
 
 ```bash
-git clone https://github.com/Indr1d-C0ld/Shadow-President.git
+git clone https://github.com/Indr1d-C0ld/Sala-Operativa.git
 ```
 
 ```bash
-cd Shadow-President && npm install
+cd Sala-Operativa && npm install
 ```
 
 ```bash
