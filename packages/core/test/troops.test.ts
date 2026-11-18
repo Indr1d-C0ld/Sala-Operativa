@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classicRules as rules, generationRules } from "@melchior/data";
-import { canInvade, deployTroops, endWar, homeTroops, reinforce, Rng, Simulation, startWar, warOf, worldFromPack, type ScenarioPack } from "../src/index.js";
+import { canInvade, deployTroops, endWar, growDeployments, homeTroops, hostChance, reinforce, Rng, Simulation, startWar, warOf, warsOf, worldFromPack, type ScenarioPack } from "../src/index.js";
 
 const dir = resolve(import.meta.dirname, "../../app/public/scenarios");
 const fresh = (y = 2026) => worldFromPack(JSON.parse(readFileSync(resolve(dir, `${y}.json`), "utf8")) as ScenarioPack, rules, generationRules, y);
@@ -34,6 +34,34 @@ describe.skipIf(!existsSync(resolve(dir, "2026.json")) || !existsSync(resolve(di
       }
     }
     expect(staged).toBe(true);
+  });
+
+  it("il contingente nasce vuoto e cresce ogni settimana fino al livello ordinato", () => {
+    const w = fresh();
+    const us = idx(w, "US");
+    const pl = idx(w, "PL");
+    expect(hostChance(w, rules, us, pl)).toBeGreaterThan(50);           // un alleato accetta volentieri
+    const out = deployTroops(w, rules, new Rng(1), us, pl, 50000, 0);
+    expect(out.kind).toBe("stationed");
+    const d = w.deployments.find((x) => x.owner === us && x.location === pl)!;
+    expect(d.troops).toBe(0);
+    expect(d.ordered).toBe(50000);
+    growDeployments(w);
+    expect(d.troops).toBeGreaterThan(0);
+    for (let k = 0; k < 20; k++) growDeployments(w);
+    expect(d.troops).toBe(50000);
+  });
+
+  it("chi invade un paese già in guerra si unisce agli attaccanti", () => {
+    const w = fresh();
+    const war = startWar(w, rules, idx(w, "KN"), idx(w, "KS"), 0);
+    const again = startWar(w, rules, idx(w, "CH"), idx(w, "KS"), 0);
+    expect(again).toBe(war);
+    expect(war.sides[0].countries).toContain(idx(w, "CH"));
+    expect(w.wars).toHaveLength(1);
+    // la Corea del Nord può combattere anche su un altro fronte
+    startWar(w, rules, idx(w, "KN"), idx(w, "CH"), 0);
+    expect(warsOf(w, idx(w, "KN"))).toHaveLength(2);
   });
 
   it("le truppe schierate ai confini rendono possibile un'invasione lontana", () => {
@@ -81,12 +109,13 @@ describe.skipIf(!existsSync(resolve(dir, "2026.json")) || !existsSync(resolve(di
     const sim = new Simulation({ world: w, rules, seed: 1, start: new Date(Date.UTC(2026, 0, 1)), player: us, interactive: true, elections: false });
     const war = startWar(w, rules, idx(w, "MX"), us, sim.day);
     war.sides[1].troops = 0;
+    war.sides[1].contributions = war.sides[1].contributions.map(() => 0);   // i soldati al fronte sono caduti
     sim.advanceDay();
     expect(sim.pending?.kind).toBe("surrender");
     const day = sim.day;
     sim.advanceDays(5);
     expect(sim.day).toBe(day);                                     // il tempo è fermo
-    sim.decideSurrender(false);
+    sim.decideSurrender("troops");
     expect(sim.reports.some((r) => r.key === "mobilization")).toBe(true);
     expect(war.sides[1].troops).toBeGreaterThan(0);
     expect(warOf(sim.world, us)).toBeDefined();

@@ -170,6 +170,8 @@ export interface Deployment {
   /** Giorno di partenza e di arrivo: prima di arrivare non combatte. */
   sent: number;
   arrive: number;
+  /** Livello ordinato: il contingente cresce ogni settimana fino a questo numero di soldati. */
+  ordered?: number;
 }
 
 /** Un lato di una guerra (struttura di lato di FUN_5825_0000). */

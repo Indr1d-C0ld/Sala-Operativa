@@ -12,18 +12,17 @@ import { relationLevel } from "./relation.js";
  *  1. se rand(1,6) ≥ pace mondiale: un paese influente di una regione agitata;
  *  2. se rand(1,6) ≥ pace mondiale: un leader di squadra a caso.
  * Poi il bersaglio, dalla regione o dai vicini, preferendo i paesi di valore strategico alto,
- * e l'azione: con l'etica si sceglie uno di 5 gruppi, con pace mondiale e relazione la colonna
- * di ostilità, e con i pesi di BIGTABLE l'azione dentro il gruppo. L'azione si esegue dopo
- * rand(0,23) ore e rand(0,2) giorni.
+ * e l'azione: con l'etica si sceglie uno di 5 gruppi di righe di BIGTABLE (dal più ostile al
+ * più mite), con pace mondiale e relazione la colonna, e con i pesi la riga dentro il gruppo.
+ * La riga diventa un codice d'azione con la tabella `rowToCode` (b442:022b, 1f0d); due righe
+ * spostano il livello commerciale. L'azione si esegue dopo rand(0,23) ore e rand(0,2) giorni.
  *
- * L'originale legge relazione, etica e pace mondiale al contrario (vedi `Rules.ai.originalScales`).
  * Le regole ◇ di `Rules.ai` (deterrenza, pace democratica, niente attacchi agli amici, invasioni
  * oltremare solo con truppe, atomica solo da chi perde) vengono dalla taratura (docs/MODELLO.md).
  *
- * Dove il reverse engineering non è completo (marcato ◇): la scelta della regione nella fase 1
- * usa la pace regionale al posto di un valore per regione non identificato; il bersaglio dei
- * paesi minori sono i vicini. Il giocatore è bersaglio solo in una partita interattiva, dove
- * può rispondere (vedi reaction.ts).
+ * Dove il reverse engineering non è completo (marcato ◇): il bersaglio dei paesi minori sono i
+ * vicini. Il giocatore è bersaglio solo in una partita interattiva, dove può rispondere (vedi
+ * reaction.ts).
  */
 export interface PlannedAction {
   actor: number;
@@ -53,10 +52,17 @@ export function chooseActors(w: WorldState, rng: Rng, player: number): number[] 
   const donors = w.donors.filter((d) => d !== player && active(w, d));
   const d = pickFirst(rng, donors, (i) => 2 * w.countries[i]!.ambition + 10);
   if (d !== undefined) actors.push(d);
-  // fase 1: un paese influente di una regione agitata (◇ pace regionale)
+  // fase 1: un paese influente di una regione agitata (b442:089c–0b1d). Le regioni in ordine
+  // di pace regionale arrotondata, dalla meno pacifica; si prende la prima che passa due tiri,
+  // rand(1,6) > pace + 2 e rand(1,25) ≤ 10, altrimenti una a caso fra le quattro meno pacifiche
   if (rng.int(1, 6) >= w.worldPeace) {
-    const regions = w.regions.map((_, k) => k).sort((a, b) => (w.regionState[a]?.peace ?? 4) - (w.regionState[b]?.peace ?? 4));
-    const k = pickFirst(rng, regions, (r) => (7 - (w.regionState[r]?.peace ?? 4)) * 5);
+    const peace = (r: number) => Math.trunc((w.regionState[r]?.peace ?? 4) + 0.5);
+    const regions = w.regions.map((_, k) => k).sort((a, b) => peace(a) - peace(b));
+    let k: number | undefined;
+    for (const r of regions) {
+      if (rng.int(1, 6) > peace(r) + 2 && rng.int(1, 25) <= 10) { k = r; break; }
+    }
+    if (k === undefined && regions.length) k = regions[rng.int(0, Math.min(regions.length, 4) - 1)];
     if (k !== undefined) {
       const members = w.regions[k]!.members.map((m) => m.country).filter((i) => i !== player && active(w, i))
         .sort((a, b) => w.countries[b]!.influence - w.countries[a]!.influence);
@@ -87,30 +93,22 @@ export function chooseTarget(w: WorldState, rng: Rng, actor: number, player: num
   return pickFirst(rng, pool, (i) => w.countries[i]!.stratValue + 10);
 }
 
-/** Codice dell'azione che `actor` sceglie contro `target`, o undefined se nessuna. */
-export function chooseAction(w: WorldState, rules: Rules, rng: Rng, actor: number, target: number): number | undefined {
+/** Riga di BIGTABLE che `actor` sceglie contro `target`, o undefined se nessuna (b442:1aae–1cdc). */
+export function chooseRow(w: WorldState, rules: Rules, rng: Rng, actor: number, target: number): number | undefined {
   const ai = rules.ai;
   const A = w.countries[actor]!;
-  const rel = relationLevel(w, rules, actor, target, rng.int(0, 3));
-  const level = ai.originalScales ? rel : 8 - rel;            // 1 armonia … 7 inimicizia
-  const ruthless = ai.originalScales ? A.ethic : 7 - A.ethic;  // 1 scrupoloso … 6 spietato
-  if (rng.int(1, ai.rogueDie) < ruthless) {
-    // ramo "fuori tabella" (b442:1abe)
-    const list = level > 4 ? ai.rogueHostile : ai.rogueOther;
+  const rel = relationLevel(w, rules, actor, target, rng.int(0, 3));   // 1 inimicizia … 7 alleanza
+  if (rng.int(1, ai.rogueDie) < A.ethic) {
+    // ramo "fuori tabella" (b442:1abe): diplomazia, per i paesi etici
+    const list = rel > 4 ? ai.rogueFriendly : ai.rogueOther;
     return list[rng.int(1, list.length) - 1];
   }
   const r1 = rng.int(1, 100);
-  // l'originale indicizza con l'etica 1–6 una tabella di 6 righe (la 6 cade fuori): con le scale
-  // corrette la riga è spietatezza − 1, così ogni grado di etica ha la sua (◇)
-  const row = Math.trunc(ruthless + 0.5) - (ai.originalScales ? 0 : 1);
-  const cumulative = ai.groupByEthic[Math.min(Math.max(row, 0), ai.groupByEthic.length - 1)]!;
+  const cumulative = ai.groupByEthic[Math.min(Math.max(Math.trunc(A.ethic + 0.5), 0), ai.groupByEthic.length - 1)]!;
   let group = cumulative.findIndex((x) => x >= r1);
   if (group < 0) group = cumulative.length - 1;
-  // anche la pace mondiale è letta al contrario: nell'originale un mondo in pace (6) sceglie
-  // le colonne più ostili; con le scale corrette la riga è 7 − pace (◇)
-  const p0 = Math.min(Math.max(Math.trunc(w.worldPeace + 0.5), 1), ai.columnByPeace.length);
-  const peace = ai.originalScales ? p0 : ai.columnByPeace.length + 1 - p0;
-  const column = ai.columnByPeace[peace - 1]![level - 1]! - 1;
+  const peace = Math.min(Math.max(Math.trunc(w.worldPeace + 0.5), 1), ai.columnByPeace.length);
+  const column = ai.columnByPeace[peace - 1]![rel - 1]! - 1;
   let r2 = rng.int(1, 100);
   for (let row = ai.groupStart[group]!; row < ai.weights.length; row++) {
     r2 -= ai.weights[row]![column]!;
@@ -120,9 +118,28 @@ export function chooseAction(w: WorldState, rules: Rules, rng: Rng, actor: numbe
 }
 
 /**
- * Correzioni dell'originale dopo la scelta (b442:1f23–2073), riprodotte come lette (◇ il
- * senso di 5 e 23 non è chiaro):
- *  - 5 abbassa il livello commerciale col bersaglio di un passo, 23 lo alza (solo donatori);
+ * Le righe del commercio (b442:1ce5–1f0a): un passo verso l'embargo o verso la nazione più
+ * favorita, solo se chi agisce è un donatore. Restituisce il codice 8–11, o undefined.
+ */
+export function tradeStep(w: WorldState, actor: number, target: number, down: boolean): number | undefined {
+  const slot = w.donors.indexOf(actor);
+  if (slot < 0) return undefined;
+  const level = w.countries[target]!.tradeLevel[slot] ?? 3;      // 4 nazione più favorita … 1 bloccato
+  const next = down ? Math.max(level - 1, 1) : Math.min(level + 1, 4);
+  return 12 - next;                                                // livello 4..1 → codice 8..11
+}
+
+/** Codice dell'azione che `actor` sceglie contro `target` (riga di BIGTABLE tradotta), o undefined. */
+export function chooseAction(w: WorldState, rules: Rules, rng: Rng, actor: number, target: number): number | undefined {
+  const row = chooseRow(w, rules, rng, actor, target);
+  if (row === undefined) return undefined;
+  if (row === rules.ai.tradeDownRow || row === rules.ai.tradeUpRow) return tradeStep(w, actor, target, row === rules.ai.tradeDownRow);
+  const code = rules.ai.rowToCode[row];
+  return code === undefined || code < 0 ? undefined : code;
+}
+
+/**
+ * Correzioni dell'originale sul codice scelto (b442:1f3e–2073):
  *  - l'attacco nucleare diventa un assassinio se chi agisce ha livello nucleare < 4;
  *  - attacco chirurgico, invasione e truppe diventano armi ai ribelli contro un paese più forte,
  *    e sabotaggio per un paese di quota militare < 2,3 in una squadra, senza confine comune.
@@ -130,13 +147,6 @@ export function chooseAction(w: WorldState, rules: Rules, rng: Rng, actor: numbe
 export function adjustAction(w: WorldState, actor: number, target: number, code: number): number | undefined {
   const A = w.countries[actor]!;
   const T = w.countries[target]!;
-  if (code === 5 || code === 23) {
-    const slot = w.donors.indexOf(actor);
-    if (slot < 0) return undefined;
-    const level = T.tradeLevel[slot] ?? 3;                      // 4 nazione più favorita … 1 bloccato
-    const next = code === 5 ? Math.max(level - 1, 1) : Math.min(level + 1, 4);
-    return 12 - next;                                            // livello 4..1 → codice 8..11
-  }
   if (code === 24 && A.nucLevel < 4) return 16;
   const military = code === 20 || code === 21 || code === 25;
   if (military && A.milShare < T.milShare) return 12;

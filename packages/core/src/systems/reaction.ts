@@ -101,9 +101,10 @@ export function resolveReaction(w: WorldState, rules: Rules, rng: Rng, player: n
       if (P.ethic > 1.5) P.ethic *= 0.75;
       const S = (P.nucShare * (P.ambition / (A.ambition + 1)) + 50 - A.nucShare * 0.02 + 2 * rel) * ((7 - P.ethic) / 3);
       out.threshold = S;
+      A.ambition += 1;                                    // a482:4771–4ae8, dopo la soglia
       out.prevented = roll <= S;
-      if (out.prevented) { P.ler *= 1.1; w.worldPeace -= 0.5; }
-      else P.ler *= 0.9;
+      if (out.prevented) { P.ler *= 1.1; w.worldPeace -= 0.5; A.peace -= 1; P.peace -= 1; }
+      else { P.ler *= 0.9; w.worldPeace -= 1; A.peace -= 2; P.peace -= 1; }
       break;
     }
   }

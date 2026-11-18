@@ -69,7 +69,7 @@ describe.skipIf(!existsSync(PACK))("reazione del giocatore", () => {
         sim.decide(true);
         expect(sim.reports.some((r) => r.key === "proposalAccepted")).toBe(true);
       } else {
-        sim.decideSurrender(false);                                       // si combatte ancora
+        sim.decideSurrender("troops");                                       // si combatte ancora
         expect(sim.reports.some((r) => r.key === "mobilization")).toBe(true);
       }
       expect(sim.pending === null || sim.pending !== p).toBe(true);

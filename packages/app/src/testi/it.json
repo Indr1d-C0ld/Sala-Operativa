@@ -122,6 +122,8 @@
   "azioneIaRiuscita": "{attore} → {paese}: {azione}, riuscita",
   "azioneIaFallita": "{attore} → {paese}: {azione}, fallita",
   "avvisoCia": "CIA: attacco in preparazione da parte {attore_di} contro {paese_il}",
+  "avvisoCiaOperazione": "CIA: {attore_il} prepara un {azione} contro {paese_il}",
+  "scandaloCoperta": "Scandalo: la stampa rivela un'operazione coperta americana contro {paese_il}",
   "esercitazioni": "Manovre militari {attore_di} ai confini {paese_di}",
   "reazioni": [
     "Nessuna reazione",
@@ -348,13 +350,15 @@
   "schieramentoRifiutato": "Nessun paese vicino {paese_a} accetta le truppe {attore_di}",
   "entraInGuerra": "Entrata in guerra {attore_di} in difesa {paese_di}",
   "truppeArrese": "Le truppe {attore_di} {paese_in} si sono arrese",
-  "mobilitazione": "Mobilitazione generale negli Stati Uniti",
+  "mobilitazione": "Gli Stati Uniti mandano al fronte {n} soldati rimasti in patria",
+  "resaRifiutata": "{attore_il} respinge la richiesta di resa degli Stati Uniti",
   "titoloResa": "La difesa sta cedendo",
   "testoResa": "Il nemico ({attore}) sta vincendo la guerra sul nostro suolo.",
   "testoResa2": "Truppe al fronte: {truppe}. Caduti: {morti}.",
   "scelteResa": [
-    "Mobilitazione generale",
-    "Resa"
+    "Chiedi la resa al nemico",
+    "Manda al fronte le truppe in patria",
+    "Arrenditi"
   ],
   "disastri": [
     "Carestia per la siccità",

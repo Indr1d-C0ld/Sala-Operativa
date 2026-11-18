@@ -172,7 +172,7 @@ Ricostruito dal printf di debug di `ProcessQueue` (overlay A, `"%-s EventType=%d
 | 2 | azione del giocatore, eseguita in differita | come il tipo 1, preceduta da una scheda descrittiva |
 | 3 | **evento sociale** (stadi 1–10, sotto "Disordini sociali") | `FUN_6a19_155d` |
 | 4 | variazione di popolarità del presidente | `FUN_8a38_0000` |
-| 5 | conseguenze di un attacco nucleare del giocatore (`nucdsc01.txt`) | codice 0 `FUN_8a38_17a2`, 1 `FUN_8a38_4c6a`, 2 `FUN_8a38_39b5` |
+| 5 | conseguenze di un attacco nucleare (`nucdsc01.txt`) | codice 0 `FUN_8a38_17a2`, 1 `FUN_8a38_4c6a`, 2 `FUN_8a38_39b5` |
 | 6 | avviso CIA prima di un attacco (`wrndsc01.txt`) | `FUN_6a19_34e8` + `FUN_8a38_5ba0`; codice 1 = preparativi, 2 = truppe al confine |
 
 Codici azione (`ACTLST.FIL`, 0-based) ed esecutori. Gli esecutori ricevono `(chi agisce, bersaglio, codice, parametro, 0)` e restituiscono 1 se l'azione riesce:
@@ -592,16 +592,24 @@ Fra i candidati, ordinati per valore strategico (C+198), si prende il primo con 
 3. La colonna è `P[int(pace_mondiale + 0,5) − 1][r − 1] − 1`, con le righe di P: 1 1 2 3 4 4 5 / 1 2 2 3 4 4 5 / 1 2 3 3 4 5 5 / 2 3 4 4 4 5 6 / 3 4 4 5 5 6 6 / 3 4 5 5 6 6 6.
 4. Dalla prima riga del gruppo (0, 7, 14, 19, 23; fine 28) si sottraggono i pesi di BIGTABLE da `rand(1,100)` finché il resto è ≤ 0.
 
-Le righe sono i codici d'azione di `ACTLST.FIL`. In ogni colonna i pesi di un gruppo sommano a 100.
+In ogni colonna i pesi di un gruppo sommano a 100. Le righe **non** sono codici d'azione: la tabella locale a bp−0x254 (b442:022b–02cd) le traduce a b442:1f0d:
+
+    riga   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
+    codice 24 21 25 21 20  –  2 16 20 14 15 12  6  2  7 12  4  6 13 22 18  4  3  –  5  4  0  1
+
+Prima della traduzione (b442:1f23) −1 vuol dire nessuna azione, la riga 5 apre il ramo "commercio giù" (1ce5) e la riga 23 il ramo "commercio su" (1df9). Anche il ramo fuori tabella passa dalla traduzione: {22, 16, 24, 14} diventano {3, 4, 5, 7}, {26, 27, 6, 22, 16, 24, 12} diventano {0, 1, 2, 3, 4, 5, 6}. La tabella G ha 6 righe ma è indicizzata con `int(etica + 0,5)`: con etica 6 si legge oltre, nei pesi della riga 0 di BIGTABLE (bp−0x18c), e il ciclo prosegue finché un valore supera il tiro; il gruppo è limitato a 5.
 
 **Correzioni** (b442:1f23–2073):
-- 5 → abbassa il livello commerciale di un passo (4→9, 3→10, altrimenti 11), solo se chi agisce è un donatore;
-- 23 → lo alza (1→10, 2→9, altrimenti 8);
+- riga 5 → abbassa il livello commerciale di un passo (4→9, 3→10, altrimenti 11), solo se chi agisce è un donatore (livello da MORENUMS);
+- riga 23 → lo alza (1→10, 2→9, altrimenti 8);
+- poi, sui codici già tradotti:
 - 24 → 16 se il livello nucleare di chi agisce è < 4;
 - 20, 21, 25 → 12 se la quota militare di chi agisce è minore di quella del bersaglio;
 - con quota < 2,3, una squadra e il controllo `FUN_5178_3c7c` fallito, diventano 14.
 
-**Scale lette al contrario.** La colonna cresce con la relazione e la scelta del ramo estremo con l'etica: l'IA tratta 7 come inimicizia e l'etica alta come spietatezza, al contrario del resto del gioco. È probabilmente un errore dell'originale.
+**Scale.** La colonna cresce con la relazione (colonne miti con gli amici), il gruppo diventa più mite con l'etica, e un mondo in pace sceglie colonne più miti. Una lettura precedente, che prendeva le righe per codici, faceva sembrare queste scale al contrario.
+
+**Campagne coperte** (switch a b442:42a9). Sabotaggio, colpo di stato e assassinio non partono subito: dal ramo 21f6 il sabotaggio diventa spionaggio (49%, se donatore, 1,2× le spie già presenti), armi ai ribelli entro 0–4 giorni (40%), condanna entro 3–6 giorni (80%), avviso CIA (evento tipo 6) entro 7–14 giorni (40%) e l'operazione fra 15 e 25 giorni. Colpo di stato e assassinio seguono lo stesso schema. Il turno parte una volta a settimana, il martedì (1000:2bb4); la fase 1 sceglie la regione con `rand(1,6) > pace + 2` e `rand(1,25) ≤ 10` sulle regioni ordinate per pace (2A56:016A), altrimenti una fra le quattro meno pacifiche (b442:089c–0b1d).
 
 **Messa in coda.** L'evento è di tipo 1 e scatta all'orario attuale più `rand(0,23)·3600 + rand(0,2)·86400` secondi (`FUN_854f_0300`); lo spionaggio porta come parametro un importo ×1,2.
 
@@ -710,18 +718,29 @@ per ogni territorio coinvolto e ogni contingente TROOPS del partecipante lì:
 ```
 Chi ha combattuto in casa resta quindi molto belligerante (2,5–3), mentre i partecipanti esterni tornano verso la pace.
 
+### Schieramento di truppe e composizione dei lati (overlay 47 `5db5`, 45 `5178`, 46 `5825`)
+
+- **Schieramento** (`FUN_5db5_0000`): con un contingente già nel bersaglio ne cambia il livello ordinato (`FUN_5178_31d0`); altrimenti `FUN_5db5_0be3(A,T,1)` chiede al bersaglio stesso, poi ai confinanti in ordine di CONTIG (il controllo di contiguità di A a 5db5:0f7c è un'assegnazione: codice morto). Accettazione (`FUN_5db5_1b0d`): `(etica_A > 3 o squadra_A == squadra_H)` e `rand(1,100) ≤ ansia_mil_H − 0,6·(8−rel)²·pace_H − 15·(8−rel) + 15·rel`; chi rifiuta: ansia militare ×1,05 (max 100), pace ×0,98 (min 1). Il tiro `33 + 5·ambizione` (5db5:05a8) è la reazione del bersaglio a uno schieramento fallito.
+- **Crescita** (`FUN_5825_4af0`, da domenica a lunedì): il contingente nasce con truppe 0 e sale verso il livello ordinato di `min(120000, 62000·spesa_mil/forza/100000)` a ogni chiamata.
+- **Invasione senza truppe vicine** (`FUN_854f_246c`): l'IA mette in coda uno schieramento a +0–23 ore e ritenta l'invasione dopo 14 giorni.
+- **Lati** (`FUN_5178_3c7c`, chiamata dal ramo invasione d1a4:4019; zona = bersaglio e confinanti, `FUN_5178_2d89`): righe di CONFLICT per coppia (partecipante, teatro), quindi più fronti; chi difende impegna forza − truppe all'estero; chi attacca lo stesso se confina, altrimenti i contingenti nella zona; entrano i terzi con più di 1000 soldati nella zona e una squadra, e il leader della squadra del bersaglio. Se chi attacca guida la squadra del bersaglio: il bersaglio esce, etica_A = 1, ambizione_A +2.
+- **Cedimento degli Stati Uniti** (5825:433e/43ce/44fc/45ac/467b): niente resa né annessione automatica; `[0xb4]=0`, `[0x50]=1` (interruzione) e la guerra continua. Dalla Sala della guerra: "Demand Opponent's Surrender", "Adjust Troop Level in Country", "Surrender to Opponent". Non esiste una mobilitazione generale.
+- **Frequenze** (`FUN_1000_25cd`, a ogni nuovo giorno): martedì turno IA, mercoledì `FUN_5db5_2d33`, giovedì tick di guerra `FUN_5825_0000`, venerdì `FUN_5caa_0bff`; nella Sala della guerra (`FUN_5178_0122`) il tick di guerra è giornaliero.
+
 ### Conseguenze nucleari (EventType 5, overlay 21)
 
-Dopo un attacco nucleare del giocatore ProcessQueue esegue tre eventi in sequenza (testi in `nucdsc01.txt`):
+Dopo ogni attacco nucleare, del giocatore o dell'IA, il ramo 24 dell'esecutore (d1a4:7483–7584) mette in coda tre eventi (testi in `nucdsc01.txt`): il codice 0 a +4–18 ore, il codice 1 a +1 ora, il codice 2 solo se n > 8 e `rand(1,20) < n` (n = testate lanciate) a +7–14 giorni. Il codice 1 (`FUN_8a38_4c6a`) non sposta le alleanze: mette in coda le reazioni dei donatori contro chi ha colpito.
 
 | codice | funzione | effetto |
 |---|---|---|
 | 0 | `FUN_8a38_17a2` | ricaduta sui paesi della regione: militare, spese e peso militare ×0,8, economia ×0,75, **pace ×0,5**, popolazione ×0,95, crescita del PIL ×0,8, ambizione ×1,3, etica ×0,8, n00 e n10 ×1,3; poi ricalcolo di pil pro capite e qualità della vita |
-| 1 | `FUN_8a38_4c6a` | spostamento delle alleanze (confronti su influenza×15) |
+| 1 | `FUN_8a38_4c6a` | reazioni dei donatori contro chi ha colpito (con probabilità 15·influenza): atomica dai compagni di squadra con livello ≥ 5, altrimenti condanne, inviati, colpi di stato, assassinii, spionaggio, embarghi |
 | 2 | `FUN_8a38_39b5` | effetto su tutti i 168 paesi: militare ×0,9, economia ×0,85, **pace ×0,5**, popolazione ×0,95, crescita ×0,9, ambizione ×1,1, etica ×0,9, n00 ×1,2, n10 ×1,1; STRATEGY +120..+152 ×1,1–1,2, +16/+24/+32 ×1,3; ricalcolo dei totali mondiali con pace mondiale ≥ 1 |
 
 **Effetto diretto dell'attacco** (ramo 24 dell'esecutore `FUN_d1a4_0000`, d1a4:94e3):
-- pace mondiale = 1;
+- n = min(testate richieste, testate di chi lancia); chi lancia ne spende n, il bersaglio ne perde n (con una riserva per la ritorsione); se n ≥ 3·livello del bersaglio (1–4) il livello scende di 1, poi di un altro se ≤ 3 (d1a4:5900–6a9f, 73cd);
+- morti `min(1,5 M·n + 3% pop, 95% pop)`, soldati persi `min(60000·n, 90% forza)`, FALLFLAG[bersaglio] += 50;
+- pace mondiale = 1, e pace 1 per i due paesi;
 - malcontento (N+0x10) = 100 per chi colpisce e per chi è colpito;
 - ansia militare (S+8) e nucleare (S+0) = 100 per entrambi;
 - la pace mondiale viene ricalcolata sostituendo i contributi `pace·influenza/100` dei due paesi, con minimo 1;
@@ -740,10 +759,10 @@ Lo stesso overlay 21 gestisce la **popolarità** del presidente (globale +0x1F6 
   - altrimenti sconfitta se `rand(1,100) > (popolarità − 40)·10`.
   
   `FUN_77a0_4918` riceve l'esito come argomento e mostra la sequenza (`elecan.scr`, `pics\election.pcx`, `eleccut.scr`, una mappa degli stati, `elect.txt`: "Access … is extended four more years" o "Further access … is DENIED!"). Dopo 25 mandati: "Congratulations! You have served 25 full terms!".
-- **Impopolarità** (5000:121e–13f9): se la popolarità è sotto 15 (registro `popdebug.out`, "Popularity has just fallen below 15%%"):
+- **Impopolarità** (`FUN_5000_11cd`, 5000:11fd–13f9), a ogni nuovo giorno: se la popolarità è sotto 15 (registro `popdebug.out`, "Popularity has just fallen below 15%%"):
   - con `100 − 3·popolarità > rand(1,100)` il presidente cade;
-  - poi `rand(1,100) > 15·x + popolarità + 5` porta all'assassinio (`FUN_77a0_2381`), altrimenti alla destituzione (`FUN_77a0_2d83`, `pics\impeach3.pcx`, `impnums.txt`);
-  - x è il campo +0x78 di `*2AA9:10A2`, non identificato con certezza (la schermata elettorale ne mostra +0x00·100 come LER).
+  - poi `rand(1,50) > 15·x + popolarità + 5` porta all'assassinio (`FUN_77a0_2381`), altrimenti alla destituzione (`FUN_77a0_2d83`, `pics\impeach3.pcx`, `impnums.txt`);
+  - x è il campo +0x78 del record caricato per il paese del giocatore, copia di NUMBERS+0x30: l'etica degli Stati Uniti (decomp_A.c:74954).
 
 ### Disastri (`FUN_9aba_0000`, overlay 27)
 
@@ -946,7 +965,7 @@ importazioni_obiettivo = importazioni − 0,2·Δpersone + 0,05·Δsocietà − 
 popolarità_obiettivo   = popolarità/100 − Δpersone·(4 / 2) + 0,2·Δsocietà − Δvendite·(8 / 5)
    + effetto dei dazi + (rs − 1)·(0,9 / 5) + (rr − 1)·(0,01 / 0,005) − 0,05·(ra − 1) + saldo/10¹³ + 0,03
 ```
-Il primo coefficiente vale quando la voce aumenta, il secondo quando cala: alzare le tasse pesa più che abbassarle. Il bonus per una crescita sopra il 3% confronta la crescita con 3 invece che con 0,03, quindi nel codice non scatta mai.
+Il primo coefficiente vale quando la voce aumenta, il secondo quando cala: alzare le tasse pesa più che abbassarle. Il confronto della crescita con 3 (invece che con 0,03) è sempre vero, e il termine che ne esce fa parte dell'effetto dei dazi (5f0c:2773–289f): se i dazi salgono la popolarità cambia di `0,6·(Δdazi − d') + 0,1·(13·(crescita − 0,03) + 0,2 − dazi)`, se scendono di `20·Δdazi`.
 
 **Alla fine dell'anno (`FUN_7124_377e`, inizio del passo 1):**
 1. I valori nuovi diventano quelli correnti e il gioco rifà la valutazione.

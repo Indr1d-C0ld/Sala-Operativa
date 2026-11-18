@@ -177,6 +177,7 @@ export interface ActionOutcome {
 }
 
 const clampScales = (c: Country) => {
+  c.ler = Math.min(Math.max(c.ler, 0.01), 1);
   c.peace = Math.min(Math.max(c.peace, 1), 6);
   c.ethic = Math.min(Math.max(c.ethic, 1), 6);
   c.ambition = Math.min(Math.max(c.ambition, 1), 6);
@@ -215,22 +216,69 @@ export function performAction(w: WorldState, rules: Rules, rng: Rng, a: number, 
       if (slot >= 0) T.tradeLevel[slot] = 12 - code;                        // livello 4..1
       break;
     }
-    case 12: if (success) T.outcry = Math.min(100, T.outcry + 10); break;    // scelta nostra
+    case 12: {
+      // armi ai ribelli (dc78:46a9–4820): l'effetto cresce con l'agitazione del mondo
+      const k = 7 - w.worldPeace;
+      A.ethic *= 0.95;
+      if (success) {
+        T.outcry = Math.min(100, T.outcry * (1 + k / 100));
+        A.ler *= 1 + k / 200;
+        T.ler *= 1 - k / 100;
+      } else {
+        T.ler *= 1 + k / 300;
+        A.ler *= 1 - k / 300;
+      }
+      break;
+    }
     case 13: {
       const slot = w.donors.indexOf(a);
       if (slot >= 0) T.spiesReceived[slot] = (T.spiesReceived[slot] ?? 0) + funding;
       break;
     }
     case 14: case 15: case 16: {
+      // sabotaggio, colpo di stato, assassinio (c638:413b–5481); D = 2, 4, 8
       const D = Math.trunc((code - 12) ** 2 / 2);
       A.ethic *= 1 - D / 100;
       A.peace *= 0.99;
       T.peace *= 0.99;
-      if (success && code === 14) T.econPower *= 0.99;                       // scelta nostra
-      if (success && code === 15) { T.peace *= 0.95; changeRegime(w, rules, rng, t); }
-      if (code === 16) {
-        if (success) { T.peace *= 0.8; T.ler = 0.5; }                         // nuovo capo: LER iniziale
+      if (!success) {
+        A.ler *= 1 - 0.01 * D;
+        A.ethic *= 1 - 0.01 * D;
+        T.ler *= 1 + 0.01 * D;
+        break;
+      }
+      const L70 = common(w, rules, a, t, code).L70;
+      T.budget.espSelf *= 1.01;                                               // controspionaggio
+      A.ambition *= 1 + L70 / 10;
+      A.ler *= 1 + 0.025 * D;
+      if (code === 14) {
+        T.outcry = Math.min(100, T.outcry * 1.05);
+        T.gdpGrowth *= 0.97;
+        T.econPower = 0.1 * T.econPower < 5000 ? T.econPower * 0.95 : T.econPower - 5000;
+        T.peace *= 0.99;
+        T.ambition *= 1 + L70 / 10;
+        T.repression = Math.min(4, T.repression * (1 + L70 / 10));
+      } else if (code === 15) {
+        T.peace *= 0.95;
+        // con probabilità LER di chi agisce fino a 10·LER tentativi di un regime amico
+        const friendly = (x: string) => x === A.ideology || (rules.friends[A.ideology] ?? "").includes(x);
+        if (rng.next() < A.ler) {
+          for (let k = 0; k < Math.max(1, Math.trunc(10 * A.ler)); k++) {
+            changeRegime(w, rules, rng, t);
+            if (friendly(T.ideology)) break;
+          }
+        } else changeRegime(w, rules, rng, t);
+        // il paese esce dalla sua squadra; se ora ha l'ideologia di chi agisce entra nella sua
+        if (T.team && w.teamLeaders[T.team - 1] !== t) {
+          T.team = 0;
+          T.outcry = 100;
+        }
+        if (T.ideology === A.ideology && A.team) T.team = A.team;
+      } else {
+        T.ler *= 0.67;
+        T.peace *= 0.8;
         A.peace *= 0.99;
+        if (rng.next() < A.ler) T.ethic = (A.ethic + T.ethic) / 2;          // il successore somiglia a chi agisce
       }
       break;
     }

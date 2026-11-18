@@ -8,14 +8,20 @@ import { deploymentsIn, hasForwardTroops, homeTroops, releaseDeployments } from 
  * Guerra (originale: FUN_5825_0000 overlay 46, resa FUN_5db5_3cd2, annessione FUN_5db5_2ef9).
  * Formule in re/FORMATS.md, "Guerra" e "Resa".
  *
+ * Composizione dei lati (FUN_5178_3c7c), sulla zona del bersaglio e dei suoi confinanti: chi
+ * attacca impegna tutto l'esercito in patria se confina, altrimenti solo i contingenti schierati
+ * nella zona; chi difende tutto l'esercito in patria. Entrano i terzi con almeno 1000 soldati
+ * nella zona, dalla parte del compagno di squadra, e il leader della squadra del bersaglio con i
+ * suoi contingenti nella zona. Un paese può combattere su più fronti, e chi invade un paese già
+ * in guerra si unisce agli attaccanti. Se chi attacca guida la squadra del bersaglio, questo ne
+ * esce e chi attacca diventa spietato (etica 1, ambizione +2).
+ *
  * Scelte nostre (◇), dove l'originale non è decifrato:
- *  - fattibilità dell'invasione: confine comune, truppe già schierate presso il bersaglio
- *    (azione 25), oppure chi attacca è una grande potenza (quota militare ≥ projectionShare);
- *  - chi attacca impegna rules.war.commitShare delle truppe in patria più i contingenti schierati
- *    presso il bersaglio; chi difende tutte le sue, più i contingenti alleati sul suo territorio,
- *    che entrano in guerra anche se arrivano dopo;
- *  - negoziato di pace: soglia min(100·LER, 10 + 10·relazione + (100 − forza minore)/2);
- *  - l'escalation nucleare non è ancora collegata (manca il modulo delle conseguenze nucleari).
+ *  - fattibilità dell'invasione: confine comune, truppe schierate presso il bersaglio (azione
+ *    25), oppure una quota militare ≥ projectionShare (nei fatti solo gli Stati Uniti);
+ *  - i terzi entrano senza il tiro dell'originale; i contingenti senza squadra già nel paese
+ *    invaso lo difendono;
+ *  - negoziato di pace: soglia min(100·LER, 10 + 10·relazione + (100 − forza minore)/2).
  */
 const ROW_LIMITS = [0.86, 0.72, 0.58, 0.44, 0.3, 0.16, 0.02, 0.01, 0.005, 0.0025, 0.0012, 0.0006, 0.0003,
   0.00015, 8e-5, 4e-5, 2e-5, 1e-5, 5e-6, 2.5e-6];
@@ -27,12 +33,18 @@ export function warOf(w: WorldState, i: number): War | undefined {
   return w.wars.find((war) => war.theater === i || war.sides.some((s) => s.countries.includes(i)));
 }
 
+/** Tutte le guerre in cui un paese combatte o è il teatro. */
+export function warsOf(w: WorldState, i: number): War[] {
+  return w.wars.filter((war) => war.theater === i || war.sides.some((s) => s.countries.includes(i)));
+}
+
 /** L'invasione è fattibile? (◇ vedi sopra) `day` serve a contare solo i contingenti arrivati. */
 export function canInvade(w: WorldState, rules: Rules, a: number, t: number, day = Infinity): boolean {
   const A = w.countries[a]!;
   const T = w.countries[t]!;
   if (a === t || !A.econPower || !T.econPower || A.troops < 1) return false;
-  if (warOf(w, a) || warOf(w, t)) return false;                // un fronte alla volta
+  // chi già combatte contro il bersaglio non apre un secondo fronte contro di lui
+  if (w.wars.some((war) => war.theater === t && war.sides[0].countries.includes(a))) return false;
   return (w.neighbours[a] ?? []).includes(t) || hasForwardTroops(w, a, t, day) || A.milShare >= rules.war.projectionShare;
 }
 
@@ -68,17 +80,67 @@ function forwardOf(w: WorldState, a: number, t: number, day: number): Deployment
   return w.deployments.filter((d) => d.owner === a && near.has(d.location) && d.arrive <= day);
 }
 
-/** Apre una guerra: `a` invade `t`; i contingenti alleati presenti in `t` lo difendono. */
-export function startWar(w: WorldState, rules: Rules, a: number, t: number, day = 0): War {
-  const id = w.wars.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+/** Truppe che `a` porta contro `t`: l'esercito in patria se confina, più i contingenti nella zona. */
+function commitment(w: WorldState, a: number, t: number, day: number): number {
   const forward = forwardOf(w, a, t, day).reduce((s, d) => s + d.troops, 0);
-  const guests = deploymentsIn(w, t, day).filter((d) => d.owner !== a && d.owner !== t);
+  return ((w.neighbours[a] ?? []).includes(t) ? homeTroops(w, a) : 0) + forward;
+}
+
+/** Aggiunge un paese a un lato già formato. */
+function join(w: WorldState, side: WarSide, i: number, troops: number): void {
+  const c = w.countries[i]!;
+  side.countries.push(i);
+  side.contributions.push(troops);
+  side.troops += troops;
+  side.force += c.troops;
+  side.spending += c.milSpend;
+  side.population += c.population;
+}
+
+/**
+ * Apre una guerra: `a` invade `t`. Se `t` è già teatro di una guerra, `a` si unisce agli
+ * attaccanti e restituisce quella guerra.
+ */
+export function startWar(w: WorldState, rules: Rules, a: number, t: number, day = 0): War {
+  const A = w.countries[a]!;
+  const T = w.countries[t]!;
+  const existing = w.wars.find((x) => x.theater === t);
+  if (existing) {
+    if (!existing.sides[0].countries.includes(a)) join(w, existing.sides[0], a, commitment(w, a, t, day));
+    return existing;
+  }
+  // chi invade un paese della squadra che guida: il paese ne esce, e chi attacca si incattivisce
+  if (T.team && w.teamLeaders[T.team - 1] === a) {
+    T.team = 0;
+    A.ethic = 1;
+    A.ambition = Math.min(6, A.ambition + 2);
+  }
+  const id = w.wars.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+  const attackers = [a];
+  const attackTroops = [commitment(w, a, t, day)];
+  const defenders = [t];
+  const defendTroops = [homeTroops(w, t)];
+  const zone = new Set([t, ...(w.neighbours[t] ?? [])]);
+  const inZone = new Map<number, number>();
+  for (const d of w.deployments) {
+    if (!zone.has(d.location) || d.arrive > day || d.owner === a || d.owner === t) continue;
+    inZone.set(d.owner, (inZone.get(d.owner) ?? 0) + d.troops);
+  }
+  const leader = T.team ? w.teamLeaders[T.team - 1] : undefined;
+  for (const [owner, troops] of inZone) {
+    const O = w.countries[owner]!;
+    const guestInTheater = deploymentsIn(w, t, day).some((d) => d.owner === owner);
+    if (owner === leader || (O.team && O.team === T.team && troops >= 1000) || (guestInTheater && !(O.team && O.team === A.team))) {
+      defenders.push(owner);
+      defendTroops.push(troops);
+    } else if (O.team && O.team === A.team && troops >= 1000) {
+      attackers.push(owner);
+      attackTroops.push(troops);
+    }
+  }
   const war: War = {
     id, theater: t, start: day,
-    sides: [
-      makeSide(w, [a], [homeTroops(w, a) * rules.war.commitShare + forward], false),
-      makeSide(w, [t, ...guests.map((d) => d.owner)], [homeTroops(w, t), ...guests.map((d) => d.troops)], true),
-    ],
+    sides: [makeSide(w, attackers, attackTroops, false), makeSide(w, defenders, defendTroops, true)],
   };
   w.wars.push(war);
   return war;

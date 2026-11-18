@@ -303,19 +303,36 @@ Il turno dei paesi IA è in `systems/ai.ts`. Viene da `FUN_b442_0000` (overlay 3
 
 - **Chi agisce.** Tre fasi:
   1. un donatore, scelto se `rand(1,100) ≤ 2·ambizione + 10`;
-  2. se `rand(1,6) ≥ pace mondiale`, un paese influente di una regione agitata;
+  2. se `rand(1,6) ≥ pace mondiale`, un paese influente di una regione agitata: le regioni in ordine di pace regionale arrotondata, dalla meno pacifica, e si prende la prima con `rand(1,6) > pace + 2` e `rand(1,25) ≤ 10`, altrimenti una a caso fra le quattro meno pacifiche;
   3. con la stessa condizione, un leader di squadra.
 - **Bersaglio.** Le grandi potenze cercano in una regione agitata, le medie nella regione di casa, le minori fra i vicini; si preferiscono i paesi di valore strategico alto.
-- **Azione.** Con l'etica si sceglie uno di 5 gruppi, con pace mondiale e relazione la colonna, con i pesi di BIGTABLE l'azione dentro il gruppo. Un ramo "fuori tabella" (`rand(1,7) < etica`) pesca fra sabotaggio, assassinio e azioni nucleari.
-- **Correzioni dopo la scelta.** 5 e 23 spostano il livello commerciale di un passo; l'attacco nucleare senza livello nucleare 4 diventa un assassinio; gli attacchi contro un paese più forte diventano armi ai ribelli.
-- **Esecuzione.** Dopo `rand(0,23)` ore più `rand(0,2)` giorni.
+- **Azione.** Con l'etica si sceglie uno di 5 gruppi di righe di BIGTABLE, dal più ostile al più mite; con pace mondiale e relazione la colonna, dalla più ostile (1) alla più mite (6); con i pesi la riga dentro il gruppo. Un ramo "fuori tabella" (`rand(1,7) < etica`) pesca fra righe di diplomazia: lo prendono i paesi etici.
+- **Dalla riga al codice.** Le 28 righe di BIGTABLE non sono codici d'azione: una tabella locale (b442:022b, letta a b442:1f0d) li traduce, per esempio la riga 0 è l'attacco nucleare, la 7 l'assassinio, le ultime riforme e diritti umani. Le righe 5 e 23 spostano di un passo il livello commerciale verso l'embargo o verso la nazione più favorita, solo per i donatori (`rowToCode`, `tradeDownRow`, `tradeUpRow`).
+- **Correzioni dopo la scelta.** L'attacco nucleare senza livello nucleare 4 diventa un assassinio; attacchi, invasioni e truppe contro un paese più forte diventano armi ai ribelli.
+- **Esecuzione.** Dopo `rand(0,23)` ore più `rand(0,2)` giorni. Sabotaggio, colpo di stato e assassinio sono invece una campagna (b442:21f6): spionaggio (49%, solo i donatori), armi ai ribelli entro 4 giorni (40%), una condanna fra 3 e 6 giorni (80%), un avviso CIA fra 7 e 14 giorni (40%) e l'operazione fra 15 e 25 giorni (◇ colpo di stato e assassinio seguono lo stesso schema con piccole differenze non trascritte).
+- **Frequenza.** Una volta a settimana, il martedì (1000:2bb4): `turnEveryDays` = 7.
 
-**Quirk importante.** L'IA legge al contrario tre scale:
-- la relazione, trattata come il "Country Interaction Mood" del manuale (7 = inimicizia);
-- l'etica, trattata come spietatezza;
-- la pace mondiale nella tabella delle colonne: un mondo in pace (6) sceglie le colonne più ostili, mentre nel resto del gioco 1 è il mondo in subbuglio (l'atomica porta la pace a 1, e con pace bassa agiscono più paesi).
+**Le scale non sono al contrario.** Fino a novembre 2026 il modello trattava le righe di BIGTABLE come codici d'azione. Ne usciva un'IA che sembrava leggere al contrario relazione, etica e pace mondiale, e che sceglieva per metà operazioni coperte; l'opzione `originalScales` capovolgeva le tre scale per rimediare. Con la tabella di traduzione le scale dell'originale sono coerenti con il resto del gioco, e l'opzione è stata tolta. La tabella dei gruppi per etica ha 6 righe ma l'originale usa la riga `int(etica + 0,5)`: la riga 0 non serve mai, e con etica 6 si legge oltre la tabella, nei pesi della prima riga di BIGTABLE. Ne esce 3% di gruppo ostile e altrimenti il gruppo più mite, che è la settima riga di `groupByEthic`.
 
-Così gli alleati si condannano e si invadono, e i paesi etici prendono più spesso il ramo estremo. `rules.ai.originalScales = false` (predefinito) capovolge le tre scale; `true` riproduce l'originale. La tabella dei gruppi per etica ha 6 righe ma l'originale la indicizza con l'etica 1–6, e la 6 cade fuori: con le scale corrette la riga è spietatezza − 1 (◇).
+**Ritorsioni** (`systems/retaliation.ts`, da `FUN_976b_044d` e `FUN_976b_0ef2`). Chi subisce un'azione risponde a chi l'ha fatta, sempre se è riuscita e una volta su tre se è fallita; con lui il leader della sua squadra, con l'etica e l'ambizione del paese colpito. Non succede quando il bersaglio è il giocatore, che decide da sé, né dopo un'atomica, che ha le sue ritorsioni. La risposta viene da APPACT.FIL: per il codice subito tre righe di cinque risposte, e la riga è `trunc(gravità + ambizione/4 − etica)` fra 0 e 2. Poi i filtri:
+- l'atomica solo con livello nucleare ≥ 4;
+- attacco, invasione e truppe da un paese di quota militare < 2,3 solo contro un confinante;
+- se `rand(1,2) < ambizione` la risposta si riduce a una condanna, per le azioni ostili, o a niente;
+- la condanna resta solo se `rand(0,8) ≥ etica`, lo spionaggio solo se `rand(0,8) ≤ ambizione`;
+- commercio e spionaggio solo da un donatore.
+
+Dopo un sabotaggio o un colpo di stato riuscito si aggiunge una condanna, dopo un'invasione un embargo. ◇ Manca il tiro di deterrenza dei paesi poco ambiziosi protetti dalle truppe del leader della loro squadra (044d:06dd–0dbb). ◇ Il ritardo della risposta è quello del turno IA.
+
+**Operazioni coperte** (c638 per sabotaggio, colpo di stato e assassinio, dc78 per le armi ai ribelli). La soglia è la stessa per l'IA e per il giocatore e dipende dalle spie che chi agisce paga nel bersaglio: chi non è un donatore non ne ha, e riesce di rado. È fedele all'originale.
+- Prima del tiro: etica di chi agisce ×(1 − D/100), pace dei due paesi ×0,99 (D = 2, 4, 8).
+- Fallimento: LER di chi agisce ×(1 − 0,01·D), etica ancora ×(1 − 0,01·D), LER del bersaglio ×(1 + 0,01·D).
+- Riuscita, per tutti: controspionaggio del bersaglio ×1,01, ambizione di chi agisce ×(1 + L70/10), LER ×(1 + 0,025·D).
+  - Sabotaggio: malcontento ×1,05, crescita ×0,97, economia ×0,95 (o −5000 se grande), pace ×0,99, ambizione e repressione del bersaglio ×(1 + L70/10).
+  - Colpo di stato: pace ×0,95; con probabilità LER di chi agisce fino a 10·LER tentativi di un regime amico, altrimenti un regime a caso; il paese esce dalla sua squadra (malcontento 100) ed entra in quella di chi agisce se ne prende l'ideologia. ◇ Mancano l'inviato di pace del nuovo regime e le contromosse del vecchio leader della squadra.
+  - Assassinio: LER del bersaglio ×0,67, pace ×0,8, pace di chi agisce ×0,99; con probabilità LER di chi agisce il successore prende la media delle due etiche.
+  - Contro gli Stati Uniti un colpo di stato o un assassinio riuscito chiude la partita.
+- Armi ai ribelli, con k = 7 − pace mondiale: etica di chi agisce ×0,95; riuscita: malcontento ×(1 + k/100), LER di chi agisce ×(1 + k/200), del bersaglio ×(1 − k/100); fallimento: LER del bersaglio ×(1 + k/300), di chi agisce ×(1 − k/300).
+- Il giocatore rischia lo scandalo, con qualsiasi esito: se `rand(1,100) > min(100·LER + 25, 90)` la stampa scopre l'operazione. La pace degli Stati Uniti scende, il malcontento sale, la popolarità cambia tre volte (subito, dopo 3–10 giorni e dopo 15–20) secondo affinità e influenza del bersaglio, e il bersaglio esce dalla squadra guidata dagli Stati Uniti. Senza scandalo la popolarità non cambia. ◇ Per le armi ai ribelli la formula della popolarità non è decifrata: vale quella delle altre azioni ostili.
 
 **Taratura (◇, novembre 2026).** `npm run taratura` (`tools/taratura_ia.ts`) simula molte partite senza interfaccia, con un giocatore automatico che non reagisce, respinge le proposte e alla resa mobilita. Conta azioni IA per tipo ed esito, guerre, annessioni, atomiche, allerte, cambi di regime, pause per il giocatore, PIL e paesi rimasti. Le opzioni (anni, durata, semi, deriva, regole da sovrascrivere) passano nella variabile `TARATURA`.
 
@@ -345,10 +362,15 @@ Dopo la taratura (8 partite di 10 anni, deriva 0, valori per anno):
 
 Su partite di 20 anni e con deriva 0,35 o 1 i valori restano simili, e il PIL mondiale circa raddoppia. Il 2008 è quieto perché parte con la pace mondiale più alta. Le azioni IA restano in maggioranza operazioni coperte (45–60%), quasi sempre fallite: è la tabella originale, e non l'ho toccata.
 
-Parti incerte, da rivedere (◇):
-- la frequenza del turno (7 giorni, scelta nostra: il ciclo principale che chiama la funzione non è decifrato);
-- la scelta della regione nella fase 1, dove uso la pace regionale al posto di un valore per regione non identificato;
-- il senso delle correzioni 5 e 23.
+**Dopo la tabella di traduzione delle righe (18 novembre 2026).** Le misure sopra valgono per l'IA che leggeva le righe come codici. Con la traduzione, le ritorsioni e le campagne coperte, nelle stesse condizioni (6 partite di 10 anni, deriva 0, valori per anno):
+
+| partenza | azioni IA | diplomazia | coperte | guerre | annessioni | PIL dopo 10 anni | allarmi / proposte al giocatore |
+|---|---|---|---|---|---|---|---|
+| 1990 | 69 | 72% | 17% | 0,03 | 0 | ×1,24 | 1,6 / 10,5 |
+| 2008 | 59 | 86% | 4% | 0 | 0 | ×1,20 | 0,1 / 1,7 |
+| 2026 | 101 | 86% | 3% | 0 | 0 | ×1,39 | 0,1 / 1,9 |
+
+L'IA dell'originale è soprattutto diplomatica, e i conflitti dipendono dalla pace mondiale: con pace alta (2008, 2026) le colonne miti e il ramo fuori tabella dei paesi etici lasciano poco spazio alle azioni ostili. Le regole ◇ della taratura restano attive ma ora intervengono di rado.
 
 Il giocatore non è mai bersaglio, perché nell'originale decide lui l'esito e quella finestra non c'è ancora. L'invasione dà solo la notizia di manovre militari; negoziato e attacco nucleare restano senza effetto fino al modulo guerra.
 
@@ -358,19 +380,24 @@ La reazione del giocatore è in `systems/reaction.ts`. In una partita interattiv
 
 Le azioni ostili contro gli USA (condanne, operazioni coperte) tirano i dadi normalmente.
 
-Restano fuori:
-- la ritorsione nucleare dopo una minaccia (`rand(1,100) ≤ ambizione`), finché non c'è il modulo nucleare;
-- alcuni ritocchi a campi non identificati nel ramo nucleare;
-- la condanna dell'aggressore dopo sanzioni riuscite;
-- il fattore c dei tagli commerciali, non letto: uso 25.
+Nel ramo della minaccia nucleare, dopo la soglia l'ambizione dell'aggressore sale di 1 (così la sua risposta atomica, `rand(1,100) ≤ ambizione`, diventa un po' più probabile). Se la minaccia riesce la pace mondiale scende di 0,5 e quella dei due paesi di 1; se fallisce la pace mondiale scende di 1, quella dell'aggressore di 2 e quella degli Stati Uniti di 1 (a482:4771–4ae8). Il fattore c dei tagli commerciali è 25, come già usato (a482:3942).
 
-La guerra (3.14) è in `systems/war.ts`. Composizione dei lati, potenza, rumore sul rapporto, righe e tabelle delle perdite, civili, danni al PIL, perdite da leadership, resa e annessione seguono `re/FORMATS.md`. Il tick è giornaliero (scelta nostra: la frequenza dell'originale non è decifrata).
+Resta fuori la condanna dell'aggressore dopo sanzioni riuscite.
+
+La guerra (3.14) è in `systems/war.ts`. Composizione dei lati, potenza, rumore sul rapporto, righe e tabelle delle perdite, civili, danni al PIL, perdite da leadership, resa e annessione seguono `re/FORMATS.md`. Il tick è giornaliero. ◇ Nell'originale è settimanale, il giovedì (1000:2c66), tranne nella "Sala della guerra", dove il tempo avanza a passi di ore e il tick è giornaliero; il nuovo gioco non ha quella schermata e tiene il ritmo della Sala della guerra.
+
+Composizione dei lati (`FUN_5178_3c7c`), sulla zona del bersaglio e dei suoi confinanti:
+- chi attacca impegna tutto l'esercito in patria se confina col bersaglio, altrimenti solo i contingenti schierati nella zona; chi difende tutto l'esercito in patria;
+- entrano i terzi con almeno 1000 soldati nella zona, dalla parte del compagno di squadra, e il leader della squadra del bersaglio con i suoi contingenti;
+- un paese può combattere su più fronti, e chi invade un paese già in guerra si unisce agli attaccanti;
+- se chi attacca guida la squadra del bersaglio, il bersaglio ne esce e chi attacca diventa spietato (etica 1, ambizione +2).
 
 Scelte nostre (◇), dove l'originale non è decifrato:
-- **fattibilità dell'invasione:** serve un confine comune, oppure chi attacca deve avere una quota militare ≥ 15 (oggi solo gli Stati Uniti). L'originale legge i contingenti TROOPS, che non ricostruiamo;
-- **truppe impegnate:** chi attacca impegna metà delle sue truppe, chi difende tutte;
-- **un fronte alla volta per paese:** chi è in guerra non apre né subisce altre invasioni;
+- **fattibilità dell'invasione:** confine comune, truppe schierate presso il bersaglio, oppure una quota militare ≥ 15 (oggi solo gli Stati Uniti);
+- **ingresso dei terzi:** senza i tiri dell'originale; i contingenti senza squadra già nel paese invaso lo difendono;
 - **negoziato di pace:** soglia `min(100·LER, 10 + 10·relazione + (100 − forza minore)/2)`.
+
+Un'invasione IA oltre i confini senza truppe vicine non parte: l'IA schiera prima le truppe e ritenta l'invasione dopo 14 giorni (`FUN_854f_246c`); se ancora non ha truppe sul posto, restano le manovre militari.
 
 Annessione: PIL, spesa militare e popolazione passano al conquistatore, che il paese conquistato riconosce come governo (`controlledBy`). Sulla carta il territorio prende il colore del conquistatore.
 
@@ -378,18 +405,17 @@ In tre anni del 2026 l'IA apre qualche guerra l'anno fra vicini; finiscono in vi
 
 Il Factbook scriveva le truppe a volte come intervalli ("1.1-1.2 million", "40-50,000"). Il parser ora prende l'estremo inferiore con l'unità del secondo, come faceva il gioco originale con la forza lavoro; prima la Russia del 2026 risultava con 1,1 soldati. Nel 1990 e nel 2008 il Factbook non dà le truppe e resta la stima dello 0,3% della popolazione.
 
-Le armi nucleari (3.15) sono in `systems/nuclear.ts`. Servono livello nucleare ≥ 1 e almeno una testata; ogni attacco ne consuma una (scelta nostra). Un attacco ha tre livelli di effetti:
-- **diretto:** pace mondiale 1, malcontento e ansie militare e nucleare al massimo per i due paesi;
-- **ricaduta sulla regione del bersaglio:** economia ×0,75, pace ×0,5, popolazione ×0,95, militare ×0,8 e il resto della tabella;
-- **effetti su tutto il mondo:** economia ×0,85, pace ×0,5, popolazione ×0,95.
+Le armi nucleari (3.15) sono in `systems/nuclear.ts`. Servono livello nucleare ≥ 1 e almeno una testata. Un attacco lancia n testate: il turno IA 0 (come l'originale), l'escalation in guerra l'ambizione, la risposta atomica di una ritorsione l'ambizione al cubo, il giocatore quante ne indica (◇ almeno una; l'interfaccia per ora ne lancia una). Gli effetti:
+- **diretto, subito:** pace 1 per il mondo e per i due paesi, malcontento e ansie militare e nucleare al massimo; il bersaglio perde `min(1,5 M·n + 3% della popolazione, 95%)` abitanti e `min(60.000·n, 90% dell'esercito)` soldati. Chi lancia spende n testate, il bersaglio ne perde n; se n ≥ 3·livello nucleare (livello 1–4) il bersaglio scende di un livello, e di un altro se è ≤ 3;
+- **ricaduta sulla regione del bersaglio, dopo 4–18 ore:** economia ×0,75, pace ×0,5, popolazione ×0,95, militare ×0,8 e il resto della tabella;
+- **reazioni dei donatori, dopo un'ora:** ciascun donatore, con probabilità 15·influenza %, reagisce contro chi ha colpito. I compagni di squadra del bersaglio con livello nucleare ≥ 5 possono rispondere con l'atomica (`rand(1,5) < ambizione`); gli altri compagni di squadra con una condanna o un inviato se etici, un colpo di stato o un assassinio se no (◇ la soglia d'etica 3,5), poi con un'azione tirata contro etica, ambizione e pace mondiale; i donatori di altre squadre con condanna, colpo di stato, spionaggio, inviato o embargo;
+- **effetti su tutto il mondo, dopo 7–14 giorni, solo con più di 8 testate e `rand(1,20) < n`:** economia ×0,85, pace ×0,5, popolazione ×0,95.
 
 Poi il bersaglio mette in coda condanna, sabotaggio e assassinio contro l'attaccante, e si arriva all'atomica anche in altri due modi:
 - **escalation in guerra:** il lato sotto il 50% di forza, se ha livello nucleare ≥ 4, colpisce quando `rand(1,6) < ambizione` e `rand(1,6) > pace`;
 - **risposta a una minaccia:** dopo una minaccia militare o nucleare del giocatore, l'aggressore lo colpisce se `rand(1,100) ≤ ambizione`.
 
 Scelte nostre (◇):
-- le tre fasi valgono per ogni attacco, non solo per quelli del giocatore, e sono immediate;
-- lo spostamento delle alleanze (fase 1) è lasciato alla ricomposizione annuale delle squadre;
 - **`rules.ai.nuclearOnlyAtWar`** (attivo): fuori da una guerra contro il bersaglio l'IA non lancia, ma dà un'allerta nucleare. Senza questo freno, con il turno settimanale, le potenze nucleari sceglievano l'azione 24 una decina di volte l'anno e in cinque anni azzeravano il PIL mondiale. Con il solo freno restavano 3–4 attacchi a partita in dieci anni, tutti in guerre fra potenze nucleari; con la taratura dell'IA (sopra) sono quasi spariti.
 
 Il bilancio del giocatore (3.16) è in `systems/budget.ts`. Segue la valutazione di `FUN_5f0c_1842`, l'applicazione di fine anno e il mese di `FUN_5f0c_308e`. Valori iniziali:
@@ -399,7 +425,7 @@ Il bilancio del giocatore (3.16) è in `systems/budget.ts`. Segue la valutazione
 
 Scelte nostre (◇):
 - le costanti in dollari del 1990 diventano rapporti con i valori iniziali della partita: aiuti / aiuti iniziali, ricerca / ricerca dell'anno prima, (saldo/PIL − saldo/PIL iniziale)/1,92;
-- l'effetto dei dazi sulla popolarità, che non è decifrato, vale 0;
+- (decifrato a novembre 2026) i dazi: se salgono, la popolarità attesa cambia di `0,6·(Δdazi − saldo) + 0,1·(13·(crescita − 0,03) + 0,2 − dazi)`, dove "saldo" è il termine del saldo già scalato; se scendono, di `20·Δdazi`, cioè abbassarli scontenta (5f0c:2773–289f);
 - il calo mensile per crescita sotto il 3% è `(crescita − 0,03)·50` punti per cento invece che un fattore, altrimenti la popolarità si dimezzerebbe ogni mese;
 - la popolarità per azione: l'invasione segue l'originale (stessa ideologia `−(infl + 4)·pace mondiale`, al massimo −40; amico la metà). Le altre azioni sono stime: atomica −30, azioni ostili verso amici −3, diplomazia +0,5;
 - la vittoria in guerra vale +10 (originale), la sconfitta −10.
@@ -408,7 +434,7 @@ L'originale punisce i tagli molto più degli aumenti: tagliare del 10% la spesa 
 
 Il mandato è in `systems/term.ts`:
 - **elezioni:** ogni quattro anni dal 1988, il primo martedì dopo il primo lunedì di novembre (l'originale cerca il primo martedì dal 1° novembre: differisce solo quando il 1° novembre è un martedì). Con popolarità ≥ 50 si vince, sotto 40 si perde, in mezzo si vince con probabilità `(popolarità − 40)·10` %. Dopo 25 mandati la partita è vinta. Le elezioni si possono disattivare (`elections: false`), come nel menu della simulazione dell'originale;
-- **impopolarità:** sotto il 15% di popolarità, ogni mese (◇ la frequenza dell'originale non è nota), il presidente cade con probabilità `100 − 3·popolarità` %, assassinato o destituito secondo un secondo tiro contro `15·LER + popolarità + 5` (◇ LER al posto di una variabile non identificata).
+- **impopolarità:** sotto il 15% di popolarità, ogni giorno (`FUN_5000_11cd`), il presidente cade con probabilità `100 − 3·popolarità` %: assassinato se `rand(1,50) > 15·etica + popolarità + 5`, altrimenti destituito. L'etica è quella degli Stati Uniti, quindi con etica ≥ 3 il presidente è sempre destituito.
 
 I consiglieri sono in `systems/advisors.ts`. Ruoli e argomenti seguono il manuale dell'originale (sette consiglieri, ciascuno con il suo rapporto, più il parere sulle azioni del "Cabinet Briefing"), ma nomi, testi e criteri dei giudizi sono nostri:
 - **rapporti:** il nucleo produce righe con chiave e numeri, e l'interfaccia le traduce dal catalogo italiano. Un test verifica che ogni chiave abbia il suo testo;
@@ -428,9 +454,9 @@ La deriva usa un flusso casuale separato, quindi con deriva 0 il mondo è identi
 
 Truppe all'estero e alleati sono in `systems/troops.ts`. Nell'originale (TROOPS, azione 25 `FUN_5db5_0000`) una guerra la combatte chi ha truppe sul teatro. Qui:
 - **all'inizio:** i principali contingenti noti, da una tabella delle regole di generazione interpolata per anno, come per gli arsenali. Per esempio USA in Germania, Giappone e Corea del Sud, URSS nei paesi del Patto di Varsavia fino al ritiro, Turchia a Cipro;
-- **schieramento (azione 25):** verso un amico (relazione ≥ 5) le truppe vanno nel paese; verso gli altri vanno in un vicino che le accetti, con il tiro dell'originale `33 + 5·ambizione` (◇ l'ambizione è del paese ospite). Arrivano dopo 7–21 giorni (◇). Prima di un ammassamento ostile il giocatore può reagire, come per attacchi e invasioni;
+- **schieramento (azione 25, `FUN_5db5_0000`):** se c'è già un contingente nel bersaglio se ne alza il livello ordinato. Altrimenti si chiede prima al bersaglio stesso, poi ai confinanti: accetta il primo per cui chi schiera è etico (> 3) o della stessa squadra e `rand(1,100) ≤ ansia militare − 0,6·(8 − rel)²·pace − 15·(8 − rel) + 15·rel`; chi rifiuta diventa più ansioso e meno pacifico. Il contingente nasce subito, vuoto, e cresce ogni settimana di `min(120.000, 62.000·spesa militare/esercito/100.000)` soldati fino al livello ordinato (`FUN_5825_4af0`; ◇ un quinto dell'esercito in patria). Il bersaglio reagisce sempre se lo schieramento riesce, altrimenti con `rand(1,100) < 33 + 5·ambizione`. Prima di un ammassamento ostile il giocatore può reagire, come per attacchi e invasioni; ◇ gli Stati Uniti non fanno da ospite;
 - **guerra:** chi ha truppe arrivate presso il bersaglio può invaderlo anche senza confine comune. I contingenti presenti nel paese invaso lo difendono, anche se arrivano a guerra iniziata, e le perdite si ripartiscono in proporzione alle truppe portate. A fine guerra i contingenti degli sconfitti si arrendono e i loro soldati sono perduti; gli altri tornano a casa;
-- **difesa degli Stati Uniti:** quando cede, decide il giocatore, come nell'originale. Se si arrende, il paese viene annesso e la partita finisce; se ordina la mobilitazione generale (◇), il 2% della popolazione va al fronte, la forza torna al 60% e la popolarità perde 5 punti.
+- **difesa degli Stati Uniti:** quando cede, la guerra non finisce e decide il giocatore, come nell'originale: chiedere la resa al nemico (◇ con la soglia del negoziato di pace), mandare al fronte le truppe rimaste in patria, o arrendersi, e allora il paese viene annesso e la partita finisce. L'originale non ha una mobilitazione generale; quella delle versioni precedenti (il 2% della popolazione al fronte, la forza al 60%, −5 punti di popolarità) era un'invenzione ed è stata tolta.
 
 I disastri sono in `systems/disasters.ts` e seguono `FUN_9aba_0000` (tabelle in `re/FORMATS.md`): carestie, terremoti, alluvioni, disastri aerei ed esplosioni chimiche. Quelli provocati dall'uomo hanno un colpevole fra i paesi "canaglia", e prendono di mira volentieri gli Stati Uniti o i nemici del colpevole. Scelte nostre (◇):
 - la frequenza: probabilità giornaliera 1/20, circa 18 disastri l'anno;

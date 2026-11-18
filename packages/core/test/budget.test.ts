@@ -40,6 +40,14 @@ describe.skipIf(!existsSync(PACK))("bilancio e popolarità del giocatore", () =>
     expect(down.target.popularity - same.target.popularity).toBeLessThan(same.target.popularity - up.target.popularity);
   });
 
+  it("abbassare i dazi costa popolarità (20 punti per ogni punto di dazio)", () => {
+    const { w, us, b } = setup();
+    const c = w.countries[us]!;
+    const same = evaluateBudget(b, c);
+    const down = evaluateBudget(b, c, { ...b.rates, tariffs: b.rates.tariffs - 0.01 }, b.spending);
+    expect(down.target.popularity).toBeLessThan(same.target.popularity);
+  });
+
   it("il bilancio proposto entra in vigore a fine anno e la popolarità si muove per mesi", () => {
     const { w, us, b } = setup();
     const sim = new Simulation({ world: w, rules, seed: 13, start: new Date(Date.UTC(2026, 11, 1)), player: us, budget: b });

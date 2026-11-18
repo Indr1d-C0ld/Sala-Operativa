@@ -89,8 +89,20 @@ export interface Rules {
     attackerLosses: number[];
     /** ◇ Quota militare oltre la quale si invade anche senza confine comune. */
     projectionShare: number;
-    /** ◇ Quota delle truppe che chi attacca impegna. */
-    commitShare: number;
+  };
+
+  /**
+   * Ritorsioni (FUN_976b_044d e FUN_976b_0ef2): chi subisce un'azione risponde, sempre se è
+   * riuscita e con probabilità `failureChance`% se è fallita; con lui il leader della sua squadra.
+   */
+  retaliation: {
+    /** APPACT.FIL: per codice subito, 3 righe (0 mite … 2 dura) di 5 risposte; −1 nessuna. */
+    responses: number[][][];
+    /** Gravità del codice subito (0, 1, 2), che si somma ad ambizione/4 − etica per la riga. */
+    gravity: number[];
+    failureChance: number;
+    /** Azione in più del bersaglio dopo un'azione riuscita (codice subito → risposta). */
+    afterwards: Record<number, number>;
   };
 
   /** Reazione del giocatore: membri permanenti del Consiglio di sicurezza (veto alle sanzioni). */
@@ -98,36 +110,43 @@ export interface Rules {
 
   /** Turno dei paesi IA (originale: FUN_b442_0000, overlay 36, e BIGTABLE.TXT). */
   ai: {
-    /** Ogni quanti giorni gira il turno IA (non ricavato dall'originale: scelta di gioco). */
+    /**
+     * Ogni quanti giorni gira il turno IA. L'originale lo chiama una volta a settimana, il
+     * martedì (1000:2bb4).
+     */
     turnEveryDays: number;
     /**
-     * Per etica: soglie cumulative (su 100) dei 5 gruppi di azioni, 6 righe. L'originale usa
-     * la riga int(etica + 0,5), con l'etica 1–6; con `originalScales` falso la riga è
-     * spietatezza − 1 (0 scrupoloso … 5 spietato).
+     * Per etica: soglie cumulative (su 100) dei 5 gruppi di righe, dal più ostile al più mite.
+     * L'originale usa la riga int(etica + 0,5): la riga 0 non serve mai, e l'etica 6 legge oltre
+     * la tabella (i pesi della prima riga di BIGTABLE), cioè 3% gruppo ostile e altrimenti il più
+     * mite. La settima riga lo riproduce.
      */
     groupByEthic: number[][];
-    /** Per pace mondiale 1–6 e livello 1–7: colonna (1–6) della tabella dei pesi. */
+    /** Per pace mondiale 1–6 e relazione 1–7: colonna (1–6) della tabella dei pesi. */
     columnByPeace: number[][];
     /** Prima riga di ogni gruppo nella tabella dei pesi (6 valori, l'ultimo è la fine). */
     groupStart: number[];
-    /** Pesi delle azioni (righe = codici 0–27, colonne 1–6 dal meno al più ostile). */
+    /**
+     * Pesi delle 28 righe di BIGTABLE.TXT nelle 6 colonne, dalla più ostile (1) alla più mite
+     * (6). Le righe non sono codici d'azione: li dà `rowToCode`.
+     */
     weights: number[][];
-    /** Azioni "fuori tabella" se rand(1,7) < etica: livello > 4 / altrimenti. */
-    rogueHostile: number[];
+    /**
+     * Codice d'azione di ogni riga (tabella locale di b442:022b); −1 per le due righe del
+     * commercio, `tradeDownRow` (un passo verso l'embargo) e `tradeUpRow` (verso la nazione più
+     * favorita), che valgono solo per i donatori.
+     */
+    rowToCode: number[];
+    tradeDownRow: number;
+    tradeUpRow: number;
+    /**
+     * Righe "fuori tabella" se rand(1, rogueDie) < etica: con relazione > 4 / altrimenti. Sono
+     * righe miti (diplomazia): il ramo lo prendono i paesi etici.
+     */
+    rogueFriendly: number[];
     rogueOther: number[];
-    /**
-     * Dado del ramo fuori tabella: ci si entra se rand(1, dado) < spietatezza. L'originale usa 7
-     * (fino a 5 volte su 7 per i paesi più spietati).
-     */
+    /** Dado del ramo fuori tabella; l'originale usa 7. */
     rogueDie: number;
-    /**
-     * L'IA dell'originale legge due scale al contrario rispetto al resto del gioco: usa il
-     * livello di relazione (7 = alleato) come il "Country Interaction Mood" del manuale
-     * (7 = inimicizia), e l'etica (6 = etico) come spietatezza. Così gli alleati si invadono e
-     * i paesi etici scelgono più spesso assassinii e attacchi. true riproduce l'originale;
-     * false capovolge entrambe le scale (8 − relazione, 7 − etica).
-     */
-    originalScales: boolean;
     /**
      * ◇ Fuori da una guerra l'IA non lancia l'atomica ma la minaccia (allerta nucleare). Senza
      * questo freno, con il turno settimanale, le potenze nucleari scelgono l'azione 24 più di

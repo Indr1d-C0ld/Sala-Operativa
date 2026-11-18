@@ -517,7 +517,8 @@ function reportText(r: Report): string {
     case "deployRefused": return f(testi.schieramentoRifiutato, { attore: actor, paese: country });
     case "warJoined": return f(testi.entraInGuerra, { attore: actor, paese: country });
     case "troopsSurrendered": return f(testi.truppeArrese, { attore: actor, paese: country });
-    case "mobilization": return testi.mobilitazione;
+    case "mobilization": return fill(testi.mobilitazione, { n: num.format(r.value ?? 0) });
+    case "surrenderDemandRefused": return f(testi.resaRifiutata, { attore: actor });
     case "playerConquered": return testi.paeseConquistato;
     case "nuclearStrike": return f(testi.attaccoNucleare, { attore: actor, paese: country });
     case "nuclearFallout": return f(testi.ricaduta, { n: String(r.stage ?? 0), paese: country });
@@ -527,7 +528,10 @@ function reportText(r: Report): string {
     case "warWon": return f(testi.guerraVinta, { attore: actor, paese: country });
     case "warRepelled": return f(testi.guerraRespinta, { attore: actor, paese: country });
     case "peaceNegotiated": return f(testi.paceNegoziata, { attore: actor, paese: country });
-    case "ciaWarning": return f(testi.avvisoCia, { attore: actor, paese: country });
+    case "ciaWarning": return r.action !== undefined
+      ? f(testi.avvisoCiaOperazione, { attore: actor, paese: country, azione: aiActionName(r.action) })
+      : f(testi.avvisoCia, { attore: actor, paese: country });
+    case "covertExposed": return f(testi.scandaloCoperta, { paese: country });
     case "militaryExercises": return f(testi.esercitazioni, { attore: actor, paese: country });
   }
 }
@@ -539,7 +543,7 @@ const SOUND_OF: Partial<Record<Report["key"], SoundName>> = {
   electionLost: "sconfitta", playerKilled: "sconfitta", playerOusted: "sconfitta", playerConquered: "sconfitta",
   troopsSurrendered: "sconfitta", warRepelled: "notizia", warWon: "guerra",
   disaster: "disastro", nuclearFallout: "disastro", electionWon: "vittoria", termsCompleted: "vittoria", peaceNegotiated: "vittoria",
-  ciaWarning: "allarme", nuclearAlert: "allarme", mobilization: "allarme",
+  ciaWarning: "allarme", nuclearAlert: "allarme", mobilization: "allarme", covertExposed: "fallimento",
   troopsDeployed: "truppe", troopsIncreased: "truppe", militaryExercises: "truppe", deployRefused: "fallimento",
   socialHappened: "disordini", socialSuppressed: "notizia",
   actionSucceeded: "conferma", actionFailed: "fallimento", reactionPrevented: "conferma", reactionFailed: "fallimento",
@@ -970,13 +974,13 @@ function budgetKey(key: string): boolean {
 function choiceKey(key: string): boolean {
   const p = sim?.pending;
   if (!sim || !p) return false;
-  const n = p.kind === "reaction" ? REACTIONS.length : 2;
+  const n = p.kind === "reaction" ? REACTIONS.length : p.kind === "surrender" ? testi.scelteResa.length : 2;
   if (key === "ArrowDown") choice = Math.min(n - 1, choice + 1);
   else if (key === "ArrowUp") choice = Math.max(0, choice - 1);
   else if (key === "Enter") {
     ui("ordine");
     if (p.kind === "reaction") sim.react(REACTIONS[choice]!);
-    else if (p.kind === "surrender") sim.decideSurrender(choice === 1);
+    else if (p.kind === "surrender") sim.decideSurrender((["demand", "troops", "surrender"] as const)[choice] ?? "troops");
     else sim.decide(choice === 0);
     choice = 0;
     sortCountries();

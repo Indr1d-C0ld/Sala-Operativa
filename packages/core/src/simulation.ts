@@ -3,16 +3,17 @@ import type { Rules } from "./rules.js";
 import type { WorldState } from "./types.js";
 import { ACTIONS, actionRefusal, performAction, type ActionOutcome, type ActionRefusal } from "./systems/actions.js";
 import { planAiTurn } from "./systems/ai.js";
-import { endWar, reinforce, startWar, warOf, warTick } from "./systems/war.js";
-import { defaultContingent, deployTroops, hasForwardTroops } from "./systems/troops.js";
+import { endWar, peaceThreshold, reinforce, startWar, warOf, warTick } from "./systems/war.js";
+import { defaultContingent, deployTroops, growDeployments, hasForwardTroops, homeTroops } from "./systems/troops.js";
 import { relationLevel } from "./systems/relation.js";
 import { DISASTER_TYPES, strikeDisaster } from "./systems/disasters.js";
-import { deterrent, hasNukes, nuclearStrike, warEscalation } from "./systems/nuclear.js";
+import { deterrent, donorReactions, globalEffects, hasNukes, nuclearStrike, regionalFallout, warEscalation } from "./systems/nuclear.js";
 import { actionPopularity, applyBudget, evaluateBudget, initialBudget, monthlyBudget, type BudgetProjection, type PlayerBudget, type Rates, type Spending } from "./systems/budget.js";
 import { affinity } from "./systems/actions.js";
 import { holdElection, MAX_TERMS, nextElection, unpopularityCheck } from "./systems/term.js";
 import { DECISION_CODES, REACTION_CODES, REACTIONS, resolveReaction, type Reaction, type ReactionOutcome } from "./systems/reaction.js";
 import { addAid, distributeAid } from "./systems/aid.js";
+import { covertPopularity, retaliation } from "./systems/retaliation.js";
 import { computeAnxieties } from "./systems/anxiety.js";
 import { computeBelligerence } from "./systems/belligerence.js";
 import { computeBudgets } from "./systems/budgets.js";
@@ -28,16 +29,26 @@ import { computeOutcry } from "./systems/unrest.js";
 import { computeInfluence, computeWorldShares, rankIdeologies } from "./systems/world.js";
 
 const DAY_MS = 86_400_000;
+/** `amount` di un'invasione IA già ritentata dopo lo schieramento delle truppe. */
+const RETRY = -1;
+/** Operazioni coperte del giocatore che la stampa può scoprire. */
+const COVERT = new Set([12, 14, 15, 16]);
 /** Notizie conservate in memoria e nei salvataggi. */
 const MAX_REPORTS = 5000;
 
 /** Copia profonda di dati semplici (lo stato non contiene funzioni né date). */
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 
-/** Evento in coda: evento sociale o azione di un paese IA (avvisi e guerre arriveranno qui). */
+/**
+ * Evento in coda: evento sociale, azione di un paese IA, avviso CIA di un'operazione in
+ * preparazione, effetto sulla popolarità del giocatore (una sua operazione scoperta).
+ */
 export type GameEvent =
   | { day: number; hour: number; kind: "social"; country: number; stage: number }
-  | { day: number; hour: number; kind: "action"; actor: number; target: number; code: number };
+  | { day: number; hour: number; kind: "action"; actor: number; target: number; code: number; amount?: number }
+  | { day: number; hour: number; kind: "nuclear"; phase: 0 | 1 | 2; actor: number; target: number }
+  | { day: number; hour: number; kind: "cia"; actor: number; target: number; code: number }
+  | { day: number; hour: number; kind: "popularity"; value: number };
 
 /**
  * Notizia prodotta dalla simulazione. Il nucleo non contiene testi: l'interfaccia traduce
@@ -50,13 +61,13 @@ export interface Report {
     | "socialSuppressed" | "socialHappened" | "regimeChange"
     | "playerKilled" | "playerOusted" | "playerConquered"
     | "actionSucceeded" | "actionFailed"
-    | "aiActionSucceeded" | "aiActionFailed" | "ciaWarning" | "militaryExercises"
+    | "aiActionSucceeded" | "aiActionFailed" | "ciaWarning" | "militaryExercises" | "covertExposed"
     | "reactionPrevented" | "reactionFailed" | "sanctionsVetoed" | "proposalAccepted" | "proposalRefused"
     | "warStarted" | "warWon" | "warRepelled" | "peaceNegotiated"
     | "nuclearStrike" | "nuclearFallout" | "nuclearWinter" | "nuclearAlert"
     | "electionWon" | "electionLost" | "termsCompleted"
     | "troopsApproaching" | "troopsDeployed" | "troopsIncreased" | "deployRefused" | "warJoined" | "troopsSurrendered"
-    | "mobilization" | "disaster";
+    | "mobilization" | "surrenderDemandRefused" | "disaster";
   /** Indice in REACTIONS della reazione del giocatore. */
   reaction?: number;
   /** Paese che agisce, per le azioni IA (country è il bersaglio). */
@@ -75,10 +86,13 @@ export type GameOver = null | "playerKilled" | "playerOusted" | "electionLost" |
 
 /** Scelta che ferma il tempo finché il giocatore non risponde. */
 export type PendingChoice =
-  | { kind: "reaction"; actor: number; target: number; code: number }
+  | { kind: "reaction"; actor: number; target: number; code: number; amount?: number }
   | { kind: "decision"; actor: number; code: number }
-  /** La difesa degli Stati Uniti cede: resa o mobilitazione generale (decide il giocatore). */
+  /** La difesa degli Stati Uniti cede: chiedere la resa, rinforzare o arrendersi (decide il giocatore). */
   | { kind: "surrender"; war: number; actor: number };
+
+/** Scelte quando cede la difesa degli Stati Uniti: chiedere la resa, rinforzare, arrendersi. */
+export type SurrenderChoice = "demand" | "troops" | "surrender";
 
 /** Passi del giorno corrente ancora da eseguire dopo una scelta del giocatore. */
 interface DayRest { aiTurn: boolean; month: boolean; year: boolean }
@@ -254,7 +268,7 @@ export class Simulation {
       if (loser === null) {
         // chi sta perdendo e ha l'atomica può usarla, entro poche ore
         const esc = warEscalation(this.world, this.rng, war);
-        if (esc) this.queueAction(esc.actor, esc.target, 24, 0, this.rng.int(1, 5));
+        if (esc) this.queueAction(esc.actor, esc.target, 24, 0, this.rng.int(1, 5), Math.trunc(this.world.countries[esc.actor]!.ambition));
         continue;
       }
       const attacker = war.sides[0].countries[0]!;
@@ -283,30 +297,31 @@ export class Simulation {
   }
 
   /**
-   * La difesa degli Stati Uniti cede: il giocatore si arrende (annessione, fine della partita) o
-   * ordina la mobilitazione generale (◇ +2% della popolazione al fronte, forza al 60%, −5 punti
-   * di popolarità).
+   * La difesa degli Stati Uniti cede (5825:433e e seguenti): la guerra non finisce e il gioco si
+   * ferma. Il giocatore può chiedere la resa all'avversario (◇ con la soglia del negoziato di
+   * pace), mandare al fronte le truppe rimaste in patria, o arrendersi (annessione, fine della
+   * partita). Nell'originale non c'è una mobilitazione generale.
    */
-  decideSurrender(surrender: boolean): void {
+  decideSurrender(choice: SurrenderChoice): void {
     const p = this.pending;
     if (!p || p.kind !== "surrender") return;
     this.pending = null;
-    const war = this.world.wars.find((x) => x.id === p.war);
+    const w = this.world;
+    const war = w.wars.find((x) => x.id === p.war);
     if (war) {
-      if (surrender) this.finishWar(war, 1);
-      else {
+      if (choice === "surrender") this.finishWar(war, 1);
+      else if (choice === "demand") {
+        if (this.rng.int(1, 100) < peaceThreshold(w, this.rules, this.player, war, this.rng.int(0, 3))) {
+          this.report({ key: "peaceNegotiated", actor: this.player, country: war.theater });
+          endWar(w, war, null);
+        } else this.report({ key: "surrenderDemandRefused", actor: p.actor, country: this.player });
+      } else {
         const def = war.sides[1];
-        const P = this.world.countries[this.player]!;
-        const extra = Math.round(P.population * 0.02);
         const k = def.countries.indexOf(this.player);
+        const extra = Math.max(0, homeTroops(w, this.player) - (k >= 0 ? def.contributions[k]! : 0));
         if (k >= 0) def.contributions[k] = def.contributions[k]! + extra;
         def.troops += extra;
-        def.force += extra;
-        def.strength = 60;
-        P.troops += extra;
-        war.mobilized = (war.mobilized ?? 0) + 1;
-        this.popularity(-5);
-        this.report({ key: "mobilization", country: this.player });
+        this.report({ key: "mobilization", country: this.player, value: Math.round(extra) });
       }
     }
     if (!this.gameOver) this.continueDay();
@@ -333,8 +348,22 @@ export class Simulation {
   }
 
   /** Mette in coda un'azione IA fra `days` giorni (ora `hour`). */
-  private queueAction(actor: number, target: number, code: number, days: number, hour = 0): void {
-    this.queue.push({ kind: "action", actor, target, code, day: this.day + days, hour });
+  /** `amount`: le testate per l'attacco nucleare, l'importo per lo spionaggio. */
+  private queueAction(actor: number, target: number, code: number, days: number, hour = 0, amount?: number): void {
+    const day = this.day + days + Math.floor(hour / 24);
+    this.queue.push({ kind: "action", actor, target, code, day, hour: hour % 24, ...(amount !== undefined ? { amount } : {}) });
+  }
+
+  /** Una conseguenza nucleare in coda (fase 0 ricaduta, 1 reazioni dei donatori, 2 effetti mondiali). */
+  private nuclearConsequence(phase: 0 | 1 | 2, actor: number, target: number): void {
+    const w = this.world;
+    if (phase === 0) this.report({ key: "nuclearFallout", country: target, stage: regionalFallout(w, target).length });
+    else if (phase === 2) {
+      globalEffects(w);
+      this.report({ key: "nuclearWinter" });
+    } else {
+      for (const r of donorReactions(w, this.rng, actor, target, this.player)) this.queueAction(r.actor, r.target, r.code, 0, r.hours, r.warheads);
+    }
   }
 
   /**
@@ -349,7 +378,7 @@ export class Simulation {
       return { code, actor, target, threshold: null, roll: null, success: true };
     }
     if (code === 25) {
-      const out = deployTroops(w, this.rules, this.rng, actor, target, defaultContingent(w, actor), this.day);
+      const out = deployTroops(w, this.rules, this.rng, actor, target, defaultContingent(w, actor), this.day, this.player);
       if (out.kind === "refused") this.report({ key: "deployRefused", actor, country: target });
       else if (out.kind === "adjusted") this.report({ key: "troopsIncreased", actor, country: out.host });
       else {
@@ -359,10 +388,11 @@ export class Simulation {
       return { code, actor, target, threshold: null, roll: null, success: out.kind !== "refused" };
     }
     if (code === 24) {
-      const strike = nuclearStrike(w, this.rng, actor, target);
-      this.report({ key: "nuclearStrike", actor, country: target });
-      this.report({ key: "nuclearFallout", country: target, stage: strike.fallout.length });
-      this.report({ key: "nuclearWinter" });
+      const strike = nuclearStrike(w, this.rng, actor, target, funding);
+      this.report({ key: "nuclearStrike", actor, country: target, value: strike.warheads });
+      for (const c of strike.consequences) {
+        this.queue.push({ kind: "nuclear", phase: c.phase, actor, target, day: this.day + Math.floor(c.hours / 24), hour: c.hours % 24 });
+      }
       // ritorsioni del bersaglio (il giocatore decide da sé come rispondere)
       if (target !== this.player) for (const [c, d] of strike.retaliation) this.queueAction(target, actor, c, d);
       return { code, actor, target, threshold: null, roll: null, success: true };
@@ -388,7 +418,15 @@ export class Simulation {
     this.rest = null;
     // a partita finita il resto della giornata non avviene
     if (this.gameOver) return;
-    if (r.aiTurn) this.aiTurn();
+    // ogni giorno, sotto il 15% di popolarità, il presidente rischia la destituzione o l'assassinio
+    if (this.budget) {
+      const fall = unpopularityCheck(this.rng, this.budget.popularity, this.world.countries[this.player]!.ethic);
+      if (fall) return this.endGame(fall === "killed" ? "playerKilled" : "playerOusted");
+    }
+    if (r.aiTurn) {
+      growDeployments(this.world);                    // i contingenti crescono ogni settimana
+      this.aiTurn();
+    }
     if (r.month) this.endOfMonth();
     if (r.year && !this.gameOver) this.endOfYear();
   }
@@ -409,12 +447,12 @@ export class Simulation {
     if (out.prevented) this.report({ key: "reactionPrevented", actor: p.actor, country: p.target, action: p.code, reaction: r });
     else {
       if (reaction !== "none" && !out.vetoed) this.report({ key: "reactionFailed", actor: p.actor, country: p.target, action: p.code, reaction: r });
-      this.runAiAction(p.actor, p.target, p.code, true);
+      this.runAiAction(p.actor, p.target, p.code, true, p.amount);
     }
     // dopo una minaccia l'aggressore può rispondere con l'atomica (a482:4698, a482:4eb4)
     const A = this.world.countries[p.actor]!;
     if ((reaction === "militaryThreat" || reaction === "nuclearThreat") && hasNukes(A) && this.rng.int(1, 100) <= A.ambition) {
-      this.queueAction(p.actor, this.player, 24, 0, this.rng.int(1, 2));
+      this.queueAction(p.actor, this.player, 24, 0, this.rng.int(1, 2), Math.trunc(A.ambition));
     }
     this.continueDay();
     return out;
@@ -450,10 +488,64 @@ export class Simulation {
     const refusal = actionRefusal(this.world, this.rules, this.player, target, code, this.day);
     if (refusal) return refusal;
     const before = { aff: affinity(this.rules, this.world.countries[this.player]!, this.world.countries[target]!)[1], infl: this.world.countries[target]!.influence };
-    const out = this.execute(this.player, target, code, funding);
-    this.popularity(actionPopularity(code, before.aff, before.infl, this.world.worldPeace));
+    const rel = relationLevel(this.world, this.rules, this.player, target, 0);
+    // ◇ l'atomica del giocatore: quante testate indica `funding`, almeno una
+    const out = this.execute(this.player, target, code, code === 24 ? Math.max(1, funding) : funding);
+    if (COVERT.has(code)) this.exposure(target, code, out.success, before.aff, before.infl, rel);
+    else this.popularity(actionPopularity(code, before.aff, before.infl, this.world.worldPeace));
     if (code !== 21 && code !== 24 && code !== 25) this.report({ key: out.success ? "actionSucceeded" : "actionFailed", country: target, action: code });
+    this.retaliate(this.player, target, code, out.success);
     return out;
+  }
+
+  /**
+   * Un'operazione coperta del giocatore può finire sui giornali (c638:5676, dc78:4858): se
+   * rand(1,100) > min(100·LER + 25, 90). Allora la pace scende, il malcontento sale, e la
+   * popolarità cambia tre volte (subito, dopo 3–10 giorni e dopo 15–20); il bersaglio esce dalla
+   * squadra guidata dagli Stati Uniti. Senza scandalo la popolarità non cambia.
+   */
+  private exposure(target: number, code: number, success: boolean, aff: number, infl: number, rel: number): void {
+    const w = this.world;
+    const P = w.countries[this.player]!;
+    if (this.rng.int(1, 100) <= Math.min(100 * P.ler + 25, 90)) return;
+    const D = Math.trunc((code - 12) ** 2 / 2);
+    P.peace = Math.max(1, P.peace * 0.99);
+    P.outcry = Math.min(100, P.outcry * (1 + D / 100));
+    this.report({ key: "covertExposed", country: target, action: code });
+    const value = covertPopularity(code, success, aff, infl, rel, w.worldPeace) ?? actionPopularity(code, aff, infl, w.worldPeace);
+    const at = (days: number, hour: number) => this.queue.push({ kind: "popularity", value, day: this.day + days, hour });
+    at(0, this.rng.int(1, 3));
+    at(this.rng.int(3, 10), 0);
+    at(this.rng.int(15, 20), 0);
+    const T = w.countries[target]!;
+    if (T.team && w.teamLeaders[T.team - 1] === this.player) T.team = 0;
+  }
+
+  /**
+   * Ritorsioni (976b_0ef2): il bersaglio risponde a chi ha agito, sempre se l'azione è riuscita,
+   * altrimenti con probabilità `failureChance`%, e con lui il leader della sua squadra. Non quando
+   * il bersaglio è il giocatore (decide lui) né dopo un attacco nucleare.
+   */
+  private retaliate(actor: number, target: number, code: number, success: boolean): void {
+    const w = this.world;
+    const rt = this.rules.retaliation;
+    if (target === this.player || code === 24 || !w.countries[target]!.econPower) return;
+    // dopo uno schieramento fallito il bersaglio reagisce con rand(1,100) < 33 + 5·ambizione (5db5:05a8)
+    const chance = code === 25 ? 33 + 5 * w.countries[target]!.ambition : rt.failureChance;
+    if (!success && this.rng.int(1, 100) >= chance) return;
+    // una risposta atomica lancia ambizione³ testate (976b_0ef2)
+    const queue = (from: number, c: number, like = from) =>
+      this.queueAction(from, actor, c, this.rng.int(0, 2), this.rng.int(0, 23), c === 24 ? Math.trunc(w.countries[like]!.ambition ** 3) : undefined);
+    const r = retaliation(w, this.rules, this.rng, target, actor, code);
+    if (r !== null) queue(target, r);
+    const extra = rt.afterwards[code];
+    if (success && extra !== undefined && (extra !== 11 || w.donors.includes(target))) queue(target, extra);
+    const T = w.countries[target]!;
+    const leader = T.team ? w.teamLeaders[T.team - 1] : undefined;
+    if (leader !== undefined && leader !== actor && leader !== target && leader !== this.player && w.countries[leader]!.econPower) {
+      const l = retaliation(w, this.rules, this.rng, leader, actor, code, target);
+      if (l !== null) queue(leader, l, target);
+    }
   }
 
   private report(r: Omit<Report, "day">): void {
@@ -465,19 +557,40 @@ export class Simulation {
   /** Turno IA: le azioni scelte vanno in coda; gli attacchi chirurgici fanno scattare un avviso CIA. */
   private aiTurn(): void {
     for (const p of planAiTurn(this.world, this.rules, this.rng, this.player, this.interactive)) {
+      if (p.code >= 14 && p.code <= 16) {
+        this.covertCampaign(p.actor, p.target, p.code);
+        continue;
+      }
       const day = this.day + Math.floor(p.delayHours / 24);
       this.queue.push({ kind: "action", actor: p.actor, target: p.target, code: p.code, day, hour: p.delayHours % 24 });
       if (p.code === 20 && day > this.day) this.report({ key: "ciaWarning", actor: p.actor, country: p.target });
     }
   }
 
+  /**
+   * Sabotaggio, colpo di stato e assassinio dell'IA sono una campagna (b442:21f6 e seguenti):
+   * spionaggio (49%, solo i donatori), armi ai ribelli entro 4 giorni (40%), una condanna fra 3 e
+   * 6 giorni (80%), un avviso CIA fra 7 e 14 giorni (40%), e l'operazione fra 15 e 25 giorni.
+   * ◇ Per colpo di stato e assassinio l'originale segue lo stesso schema con piccole differenze
+   * non trascritte.
+   */
+  private covertCampaign(actor: number, target: number, code: number): void {
+    const rng = this.rng;
+    const hour = () => rng.int(0, 23);
+    if (this.world.donors.includes(actor) && rng.int(1, 100) <= 49) this.queueAction(actor, target, 13, 0, hour());
+    if (rng.int(1, 100) <= 40) this.queueAction(actor, target, 12, rng.int(0, 4), hour());
+    if (rng.int(1, 100) <= 80) this.queueAction(actor, target, 6, rng.int(3, 6), hour());
+    if (rng.int(1, 100) <= 40) this.queue.push({ kind: "cia", actor, target, code, day: this.day + rng.int(7, 14), hour: hour() });
+    this.queueAction(actor, target, code, rng.int(15, 25), hour());
+  }
+
   /** Esegue un'azione IA in coda. Quelle del modulo guerra non ancora portato non hanno effetto. */
-  private runAiAction(actor: number, target: number, code: number, reacted = false): void {
+  private runAiAction(actor: number, target: number, code: number, reacted = false, amount?: number): void {
     const w = this.world;
     if (!w.countries[actor]!.econPower || !w.countries[target]!.econPower) return;
     const hostileDeployment = code !== 25 || relationLevel(w, this.rules, actor, target, 0) < 5;
     if (this.interactive && !reacted && REACTION_CODES.has(code) && hostileDeployment) {
-      this.pending = { kind: "reaction", actor, target, code };
+      this.pending = { kind: "reaction", actor, target, code, ...(amount !== undefined ? { amount } : {}) };
       return;
     }
     if (this.interactive && target === this.player && DECISION_CODES.has(code)) {
@@ -485,6 +598,13 @@ export class Simulation {
       return;
     }
     if (!ACTIONS.some((a) => a.code === code && !a.needsWar)) return;
+    if (code === 21 && actor !== this.player && amount !== RETRY
+      && !(w.neighbours[actor] ?? []).includes(target) && !hasForwardTroops(w, actor, target, this.day)) {
+      // senza truppe vicine l'IA prima le schiera, poi ritenta l'invasione dopo 14 giorni (854f_246c)
+      this.queueAction(actor, target, 25, 0, this.rng.int(0, 23));
+      this.queueAction(actor, target, 21, 14, 0, RETRY);
+      return;
+    }
     const refusal = actionRefusal(w, this.rules, actor, target, code, this.day);
     if (refusal === "cannotInvade") {
       // invasione non fattibile: "%-s conducted military exercises near %-s."
@@ -492,7 +612,7 @@ export class Simulation {
       return;
     }
     if (refusal) return;
-    // ◇ oltre i confini l'IA invade solo dove ha truppe schierate
+    // oltre i confini l'IA invade solo dove ha truppe schierate (◇ regola della taratura)
     const overseas = code === 21 && this.rules.ai.projectionNeedsTroops && actor !== this.player
       && !(w.neighbours[actor] ?? []).includes(target) && !hasForwardTroops(w, actor, target, this.day);
     if (overseas || (code === 21 && this.rules.ai.nuclearDeterrence && deterrent(w.countries[target]!))) {
@@ -508,8 +628,14 @@ export class Simulation {
       this.report({ key: "nuclearAlert", actor, country: target });
       return;
     }
-    const out = this.execute(actor, target, code, 10);
+    const out = this.execute(actor, target, code, amount ?? (code === 24 ? 0 : 10));
     if (code !== 21 && code !== 24 && code !== 25) this.report({ key: out.success ? "aiActionSucceeded" : "aiActionFailed", actor, country: target, action: code });
+    // un colpo di stato o un assassinio riuscito contro gli Stati Uniti chiude la partita
+    if (out.success && target === this.player && (code === 15 || code === 16)) {
+      this.endGame(code === 16 ? "playerKilled" : "playerOusted");
+      return;
+    }
+    this.retaliate(actor, target, code, out.success);
   }
 
   private processEvents(): void {
@@ -519,13 +645,25 @@ export class Simulation {
     for (let k = 0; k < due.length; k++) {
       const e = due[k]!;
       if (this.gameOver) break;
+      if (e.kind === "nuclear") {
+        this.nuclearConsequence(e.phase, e.actor, e.target);
+        continue;
+      }
       if (e.kind === "action") {
-        this.runAiAction(e.actor, e.target, e.code);
+        this.runAiAction(e.actor, e.target, e.code, false, e.amount);
         if (this.pending) {
           // il resto degli eventi di oggi aspetta la scelta del giocatore
           this.queue.push(...due.slice(k + 1));
           return;
         }
+        continue;
+      }
+      if (e.kind === "cia") {
+        if (this.world.countries[e.actor]!.econPower) this.report({ key: "ciaWarning", actor: e.actor, country: e.target, action: e.code });
+        continue;
+      }
+      if (e.kind === "popularity") {
+        this.popularity(e.value);
         continue;
       }
       if (e.kind === "social") {
@@ -557,9 +695,6 @@ export class Simulation {
     if (this.budget) {
       const P = this.world.countries[this.player]!;
       monthlyBudget(this.budget, P);
-      // sotto il 15% di popolarità il presidente rischia la destituzione o l'assassinio (◇ ogni mese)
-      const fall = unpopularityCheck(this.rng, this.budget.popularity, P.ler);
-      if (fall) this.endGame(fall === "killed" ? "playerKilled" : "playerOusted");
     }
     this.report({ key: "endOfMonth" });
   }

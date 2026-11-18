@@ -109,8 +109,12 @@ export function evaluateBudget(b: PlayerBudget, c: Country, rates = b.proposed.r
       + (fiscal < 0 ? 1.3 * fiscal : fiscal / 5);
     const profits = b.profits - 0.2 * d.personal + 0.7 * d.tariffs + (rr > 1 ? Math.min((rr - 1) * 0.015, 0.05) : (rr - 1) * 0.025);
     const imports = b.imports - 0.2 * d.personal + 0.05 * d.corporate - asym(d.tariffs, 0.5, 2);
+    // dazi (5f0c:2773–289f): alzarli piace se l'economia rallenta, abbassarli scontenta
+    const fiscalTerm = fiscal < 0 ? 1.3 * fiscal : fiscal / 5;
+    const slowdown = 13 * (growth - 0.03) + 0.2 - rates.tariffs;
+    const tariffs = d.tariffs > 0 ? 0.6 * (d.tariffs - fiscalTerm) + 0.1 * slowdown : 20 * d.tariffs;
     const popularity = b.popularity / 100 - asym(d.personal, 4, 2) + 0.2 * d.corporate - asym(d.sales, 8, 5)
-      + asym(rs - 1, 0.9, 5) + asym(rr - 1, 0.01, 0.005) - 0.05 * (ra - 1) + fiscal;
+      + asym(rs - 1, 0.9, 5) + asym(rr - 1, 0.01, 0.005) - 0.05 * (ra - 1) + fiscal + tariffs;
     out = {
       gdp, revenue: rev, totalRevenue, totalSpending, balance,
       target: { growth, profits: clamp(profits, 0.05, 0.15), imports: clamp(imports, 0.05, 0.15), popularity: clamp(popularity * 100, 0, 100) },

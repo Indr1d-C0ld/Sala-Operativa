@@ -84,11 +84,11 @@ function partita(anno: number, seme: number): Misura {
   };
   for (const c of world.countries) if (c.econPower > 0) m.etica[Math.round(c.ethic)]!++;
   // l'escalation passa da queueAction (privato) con il codice 24: la contiamo a parte
-  const s = sim as unknown as { queueAction: (a: number, t: number, code: number, d: number, h?: number) => void };
+  const s = sim as unknown as { queueAction: (a: number, t: number, code: number, d: number, h?: number, amount?: number) => void };
   const originale = s.queueAction.bind(sim);
-  s.queueAction = (a, t, code, d, h) => {
+  s.queueAction = (a, t, code, d, h, amount) => {
     if (code === 24) m.escalation++;
-    originale(a, t, code, d, h);
+    originale(a, t, code, d, h, amount);
   };
   const pil = () => sim.world.countries.reduce((s, c) => s + c.econPower, 0);
   const attivi = () => sim.world.countries.filter((c) => c.econPower > 0).length;
@@ -98,13 +98,13 @@ function partita(anno: number, seme: number): Misura {
   let campioni = 0;
   for (let g = 0; g < giorni && !sim.gameOver; g++) {
     sim.advanceDay();
-    // giocatore automatico: nessuna reazione, proposte respinte, mobilitazione
+    // giocatore automatico: nessuna reazione, proposte respinte, truppe al fronte quando cede la difesa
     for (let k = 0; k < 20 && sim.pending; k++) {
       const p = sim.pending;
       m.scelte[p.kind] = (m.scelte[p.kind] ?? 0) + 1;
       if (p.kind === "reaction") sim.react("none");
       else if (p.kind === "decision") sim.decide(false);
-      else if (p.kind === "surrender") sim.decideSurrender(false);
+      else if (p.kind === "surrender") sim.decideSurrender("troops");
     }
     if (g % 7 === 0) {
       m.pace += sim.world.worldPeace;

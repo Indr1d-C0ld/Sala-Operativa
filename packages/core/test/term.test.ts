@@ -32,10 +32,18 @@ describe("esito delle elezioni e impopolarità", () => {
 
   it("sotto il 15% il presidente rischia, sopra no", () => {
     const rng = new Rng(2);
-    expect(unpopularityCheck(rng, 20, 0.5)).toBeNull();
-    let falls = 0;
-    for (let k = 0; k < 1000; k++) if (unpopularityCheck(rng, 5, 0.5)) falls++;
+    expect(unpopularityCheck(rng, 20, 3)).toBeNull();
+    let falls = 0, killed = 0;
+    for (let k = 0; k < 1000; k++) if (unpopularityCheck(rng, 5, 3)) falls++;
     expect(falls / 1000).toBeCloseTo(0.85, 1);
+    // con etica ≥ 3 il presidente è sempre destituito; un presidente spietato può essere ucciso
+    for (let k = 0; k < 1000; k++) {
+      const f = unpopularityCheck(rng, 5, 3);
+      if (f === "killed") killed++;
+    }
+    expect(killed).toBe(0);
+    for (let k = 0; k < 1000; k++) if (unpopularityCheck(rng, 5, 1) === "killed") killed++;
+    expect(killed).toBeGreaterThan(0);
   });
 });
 

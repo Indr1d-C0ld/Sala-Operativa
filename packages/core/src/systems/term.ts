@@ -33,15 +33,15 @@ export function holdElection(rng: Rng, popularity: number): boolean {
 }
 
 /**
- * Controllo dell'impopolarità (5000:121e–13f9), quando la popolarità è sotto il 15%: con
- * probabilità (100 − 3·popolarità)% il presidente cade. Poi, se rand(1,100) > 15·x +
- * popolarità + 5, viene assassinato (FUN_77a0_2381), altrimenti destituito (FUN_77a0_2d83).
- * ◇ x è una variabile non identificata con certezza: qui il LER.
+ * Controllo dell'impopolarità (FUN_5000_11cd, 5000:11fd–13f9), ogni giorno, quando la
+ * popolarità è sotto il 15%: con probabilità (100 − 3·popolarità)% il presidente cade. Poi, se
+ * rand(1,50) > 15·etica + popolarità + 5 (l'etica del paese del giocatore), viene assassinato
+ * (FUN_77a0_2381), altrimenti destituito (FUN_77a0_2d83): con etica ≥ 3 sempre destituito.
  */
-export function unpopularityCheck(rng: Rng, popularity: number, ler: number): "killed" | "ousted" | null {
+export function unpopularityCheck(rng: Rng, popularity: number, ethic: number): "killed" | "ousted" | null {
   if (popularity >= 15) return null;
   if (100 - popularity * 3 <= rng.int(1, 100)) return null;
-  return rng.int(1, 100) > ler * 15 + popularity + 5 ? "killed" : "ousted";
+  return rng.int(1, 50) > ethic * 15 + popularity + 5 ? "killed" : "ousted";
 }
 
 /** Mandati completi dopo i quali la partita è vinta ("You have served 25 full terms!"). */

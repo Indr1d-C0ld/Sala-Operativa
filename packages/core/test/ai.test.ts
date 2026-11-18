@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classicRules as rules, generationRules } from "@melchior/data";
-import { adjustAction, chooseAction, planAiTurn, restrained, Rng, Simulation, worldFromPack, type ScenarioPack } from "../src/index.js";
+import { adjustAction, chooseAction, planAiTurn, restrained, Rng, Simulation, tradeStep, worldFromPack, type ScenarioPack } from "../src/index.js";
 
 describe("tabelle del turno IA", () => {
   it("in ogni colonna i pesi di ciascun gruppo sommano a 100 (BIGTABLE.TXT)", () => {
@@ -15,6 +15,18 @@ describe("tabelle del turno IA", () => {
         expect(sum, `gruppo ${g}, colonna ${col + 1}`).toBe(100);
       }
     }
+  });
+
+  it("ogni riga ha il suo codice d'azione; le due righe del commercio sono a parte", () => {
+    const { rowToCode, tradeDownRow, tradeUpRow, weights } = rules.ai;
+    expect(rowToCode).toHaveLength(weights.length);
+    rowToCode.forEach((code, row) => {
+      if (row === tradeDownRow || row === tradeUpRow) expect(code).toBe(-1);
+      else expect(code).toBeGreaterThanOrEqual(0);
+    });
+    // il primo gruppo è il più ostile (atomica, invasione), l'ultimo il più mite (riforme, diritti umani)
+    expect(rowToCode.slice(0, 2)).toEqual([24, 21]);
+    expect(rowToCode.slice(-2)).toEqual([0, 1]);
   });
 
   it("le soglie dei gruppi sono cumulative e arrivano a 100", () => {
@@ -57,6 +69,8 @@ describe.skipIf(!existsSync(PACK))("turno IA su un mondo generato", () => {
       return n / 2000;
     };
     expect(share(6, key("UK"), key("FR"))).toBeLessThan(share(1, key("KN"), key("KS")));
+    // un paese etico verso un amico non sceglie quasi mai azioni ostili
+    expect(share(6, key("UK"), key("FR"))).toBeLessThan(0.05);
   });
 
   it("le correzioni dopo la scelta", () => {
@@ -65,9 +79,11 @@ describe.skipIf(!existsSync(PACK))("turno IA su un mondo generato", () => {
     const slot = w.donors.indexOf(uk);
     if (slot >= 0) {
       w.countries[fr]!.tradeLevel[slot] = 3;
-      expect(adjustAction(w, uk, fr, 5)).toBe(10);           // da regolato a limitato
-      expect(adjustAction(w, uk, fr, 23)).toBe(8);           // da regolato a nazione più favorita
+      expect(tradeStep(w, uk, fr, true)).toBe(10);           // da regolato a limitato
+      expect(tradeStep(w, uk, fr, false)).toBe(8);           // da regolato a nazione più favorita
     }
+    expect(tradeStep(w, w.countries.findIndex((c, i) => c.econPower > 0 && !w.donors.includes(i)), fr, true)).toBeUndefined();
+    expect(adjustAction(w, uk, fr, 5)).toBe(5);              // "legami economici" resta com'è
     const small = w.countries.findIndex((c, i) => c.econPower > 0 && c.nucLevel < 4 && !w.donors.includes(i));
     expect(adjustAction(w, small, fr, 24)).toBe(16);
     expect(adjustAction(w, small, us, 20)).toBe(12);          // contro un paese più forte
@@ -120,11 +136,18 @@ describe.skipIf(!existsSync(PACK))("turno IA su un mondo generato", () => {
     expect(invade((x) => [x.countries.findIndex((c) => c.key === "CH"), x.countries.findIndex((c) => c.key === "IN")])).toContain("militaryExercises");
   });
 
-  it("oltre confine l'IA invade solo dove ha truppe", () => {
+  it("oltre confine l'IA prima schiera le truppe, poi ritenta l'invasione dopo 14 giorni", () => {
     // la Cina non confina con il Brasile e non vi ha truppe
-    const keys = invade((x) => [x.countries.findIndex((c) => c.key === "CH"), x.countries.findIndex((c) => c.key === "BR")]);
-    expect(keys).toContain("militaryExercises");
-    expect(keys).not.toContain("warStarted");
+    const x = fresh();
+    const [ch, br] = [x.countries.findIndex((c) => c.key === "CH"), x.countries.findIndex((c) => c.key === "BR")];
+    const sim = new Simulation({ world: x, rules, seed: 2, start: new Date(Date.UTC(2026, 0, 1)), player: us });
+    sim.queue.push({ kind: "action", actor: ch, target: br, code: 21, day: sim.day + 1, hour: 0 });
+    sim.advanceDay();
+    expect(sim.reports.map((r) => r.key)).not.toContain("warStarted");
+    const queued = sim.queue.filter((e) => e.kind === "action" && e.actor === ch && e.target === br);
+    expect(queued.map((e) => (e.kind === "action" ? e.code : -1)).sort()).toEqual([21, 25]);
+    const retry = queued.find((e) => e.kind === "action" && e.code === 21)!;
+    expect(retry.day - sim.day).toBe(14);
   });
 
   it("una guerra fra vicini parte ancora", () => {
