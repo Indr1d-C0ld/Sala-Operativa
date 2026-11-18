@@ -1,5 +1,8 @@
 # Sala Operativa
 
+
+[![Listed on Reversed with AI](https://reversedwithai.com/badge.svg)](https://reversedwithai.com/p/688-attack-sub-9a1d49f9?utm_source=badge&utm_medium=readme (https://reversedwithai.com/p/688-attack-sub-9a1d49f9))
+
 **Una simulazione geopolitica in pixel-art, dal 1990 al 2026.** Sei il presidente degli Stati Uniti: governi un mondo di oltre duecento paesi costruito sui dati reali del CIA World Factbook, fra diplomazia, operazioni coperte, guerre, bilancio federale, elezioni e crisi nucleari. Ogni partita parte dall'anno che scegli e può restare fedele alla storia o deviare verso un mondo alternativo.
 
 Il gioco è **interamente in italiano** ed è ispirato a *Shadow President* (D.C. True, 1993). Di quel gioco riprende il modello di simulazione, ricostruito con il reverse engineering per studio. Nome, grafica, suoni e testi sono originali, e del gioco originale non viene distribuito nulla.
