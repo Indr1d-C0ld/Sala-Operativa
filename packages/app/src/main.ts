@@ -411,6 +411,9 @@ function renderTitle(): void {
     font.draw(fb, row, area.x + 16, y, theme.textDim);
     y += CELL_H;
   }
+  // le partite non vanno sul server: ciascuno ha la sua, nel proprio browser
+  y = area.y + area.h - CELL_H * 4 - 16;
+  center(testi.notaSalvataggio, theme.textDim);
   y = area.y + area.h - CELL_H * 3 - 8;
   const actions = [testi.inizia, saved !== null ? fill(testi.continua, { data: shortDate.format(new Date(saved * 86_400_000)) }) : ""];
   actions.forEach((t, k) => {

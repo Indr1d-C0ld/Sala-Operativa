@@ -43,8 +43,7 @@ rsync -rltz --delete --delay-updates $DRY \
 
 [[ -n $DRY ]] && exit 0
 echo "== verifica =="
-# il sito è privato: da fuori deve chiedere la password (401); la versione si legge sul server
 code=$(curl -s -o /dev/null -w '%{http_code}' "$URL")
-ver=$(ssh "$HOST" cat "$DEST/version.json" | node -pe 'JSON.parse(require("fs").readFileSync(0)).commit' 2>/dev/null || echo "?")
-echo "   $URL → HTTP $code (atteso 401, accesso riservato), commit pubblicato $ver"
-[[ $code == 401 && $ver == "$COMMIT" ]]
+ver=$(curl -s "${URL}version.json" | node -pe 'JSON.parse(require("fs").readFileSync(0)).commit' 2>/dev/null || echo "?")
+echo "   $URL → HTTP $code, commit pubblicato $ver"
+[[ $code == 200 && $ver == "$COMMIT" ]]
