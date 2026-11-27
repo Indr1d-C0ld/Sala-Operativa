@@ -1,6 +1,7 @@
 /**
- * Nomi italiani dei paesi con articoli e preposizioni (tabella `testi/paesi.json`, prima stesura
- * da tools/build_paesi.py e poi rivista a mano).
+ * Nomi dei paesi con articoli e preposizioni. Italiano: tabella `testi/paesi.json`, prima stesura
+ * da tools/build_paesi.py e poi rivista a mano. Inglese: tabella `testi/paesi.en.json` (nome e
+ * "the"), dai nomi standard dell'inglese (Intl) e del Factbook, rivista a mano.
  *
  * Nei testi un nome si usa così, con `paese` (o `attore`, `altro`, `colpevole`) come radice:
  *   {paese}      Cina              nome nudo, per titoli ed elenchi
@@ -9,9 +10,12 @@
  *   {paese_su}   sulla Cina        {paese_in} in Cina / a Cuba / negli Stati Uniti
  */
 import tabella from "./testi/paesi.json";
+import tabellaEn from "./testi/paesi.en.json";
 
 interface Voce { nome: string; art: string; in: string }
 const TABELLA = tabella as Record<string, Voce>;
+interface VoceEn { nome: string; the: boolean }
+const TABELLA_EN = tabellaEn as Record<string, VoceEn>;
 
 const ARTICOLATE: Record<string, Record<string, string>> = {
   di: { il: "del ", lo: "dello ", la: "della ", "l'": "dell'", i: "dei ", gli: "degli ", le: "delle " },
@@ -44,6 +48,20 @@ export function forme(v: Voce | undefined, fallback: string): Forme {
 
 /** Voce della tabella per un codice Factbook. */
 export const voce = (code: string): Voce | undefined => TABELLA[code];
+
+/** Voce inglese per un codice Factbook. */
+export const voceEn = (code: string): VoceEn | undefined => TABELLA_EN[code];
+
+/**
+ * Le forme inglesi, con le stesse chiavi di quelle italiane: {paese_il} "the United States" o
+ * "China", {paese_di} "of …", {paese_a} "to …", {paese_da} "from …", {paese_su} "on …",
+ * {paese_in} "in …".
+ */
+export function formeEn(v: VoceEn | undefined, fallback: string): Forme {
+  const nome = v?.nome ?? fallback;
+  const il = v?.the ? `the ${nome}` : nome;
+  return { nome, il, di: `of ${il}`, a: `to ${il}`, da: `from ${il}`, su: `on ${il}`, in: `in ${il}` };
+}
 
 /** Parametri per `fill` di un nome: {radice}, {radice_il}, {radice_di}, … (vuoti se manca). */
 export function parametri(radice: string, f: Forme | undefined): Record<string, string> {

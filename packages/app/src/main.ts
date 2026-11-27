@@ -11,19 +11,69 @@ import {
   defaultPalette, drawGauge, drawList, drawMap, drawWindow, tileAt, windowToMap, type MapEmphasis, type MapRaster, type MapStyle,
   type MapWindow,
 } from "@melchior/ui";
-import testi from "./testi/it.json";
+import testiIt from "./testi/it.json";
+import testiEn from "./testi/en.json";
 import { GameAudio, type SoundName } from "./audio.js";
-import { forme, maiuscola, parametri, voce, type Forme } from "./paesi.js";
+import { forme, formeEn, maiuscola, parametri, voce, voceEn, type Forme } from "./paesi.js";
 import { fill } from "./testo.js";
 
 type PackCountry = ScenarioPack["countries"][number];
 
-// Nomi italiani: dal codice ISO tramite Intl; gli stati scomparsi non hanno un ISO attuale.
-const regionNames = new Intl.DisplayNames(["it"], { type: "region" });
-/** Nome italiano: dalla tabella dei paesi; per un codice che non c'è, da Intl o dal Factbook. */
-function italianName(c: PackCountry): string {
-  const v = voce(c.code);
-  if (v) return v.nome;
+// Lingua del gioco: italiano o inglese. Ha la precedenza ?lang=it|en nell'indirizzo, poi la scelta
+// salvata nel browser (tasto L nella schermata iniziale), poi la lingua del browser: italiano se è
+// italiano, altrimenti inglese. Il catalogo inglese ha le stesse chiavi di quello italiano (il tipo
+// lo controlla) e i salvataggi non contengono testi, quindi si cambia lingua anche a partita iniziata.
+type Testi = typeof testiIt;
+type Lingua = "it" | "en";
+const CATALOGHI: Record<Lingua, Testi> = { it: testiIt, en: testiEn };
+const LINGUA_KEY = "melchior-lingua";
+function linguaIniziale(): Lingua {
+  const q = new URLSearchParams(location.search).get("lang");
+  if (q === "it" || q === "en") return q;
+  try {
+    const saved = localStorage.getItem(LINGUA_KEY);
+    if (saved === "it" || saved === "en") return saved;
+  } catch {
+    // archivio del browser non disponibile
+  }
+  const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
+  return langs[0]?.toLowerCase().startsWith("it") ? "it" : "en";
+}
+let lingua: Lingua = linguaIniziale();
+let testi: Testi = CATALOGHI[lingua];
+document.documentElement.lang = lingua;
+
+// Formati di numeri e date e nomi standard dei paesi (Intl), nella lingua scelta
+let regionNames = new Intl.DisplayNames([lingua], { type: "region" });
+let num = new Intl.NumberFormat(testi.locale, { maximumFractionDigits: 0 });
+let dec = new Intl.NumberFormat(testi.locale, { maximumFractionDigits: 1 });
+let dateFmt = new Intl.DateTimeFormat(testi.locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+let dayMonth = new Intl.DateTimeFormat(testi.locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+let shortDate = new Intl.DateTimeFormat(testi.locale, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+
+/** Passa all'altra lingua: catalogo, formati, nomi dei paesi; la scelta resta nel browser. */
+function setLingua(l: Lingua): void {
+  lingua = l;
+  testi = CATALOGHI[l];
+  regionNames = new Intl.DisplayNames([l], { type: "region" });
+  num = new Intl.NumberFormat(testi.locale, { maximumFractionDigits: 0 });
+  dec = new Intl.NumberFormat(testi.locale, { maximumFractionDigits: 1 });
+  dateFmt = new Intl.DateTimeFormat(testi.locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  dayMonth = new Intl.DateTimeFormat(testi.locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+  shortDate = new Intl.DateTimeFormat(testi.locale, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+  document.documentElement.lang = l;
+  try {
+    localStorage.setItem(LINGUA_KEY, l);
+  } catch {
+    // archivio del browser non disponibile: la scelta vale fino alla chiusura della pagina
+  }
+  if (pack) computeNames(pack);
+}
+
+/** Nome del paese nella lingua scelta: dalla tabella; per un codice che non c'è, da Intl o dal Factbook. */
+function countryName(c: PackCountry): string {
+  const v = lingua === "it" ? voce(c.code)?.nome : voceEn(c.code)?.nome;
+  if (v) return v;
   try {
     const n = c.iso2 ? regionNames.of(c.iso2) : undefined;
     if (n && n !== c.iso2) return n;
@@ -33,17 +83,24 @@ function italianName(c: PackCountry): string {
   return c.name;
 }
 
-const num = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
-const dec = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 });
-const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-const dayMonth = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
-const shortDate = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+/** Nomi dei paesi del pacchetto, con articoli e preposizioni della lingua scelta. */
+function computeNames(p: ScenarioPack): void {
+  nameForms = p.countries.map((c) => (lingua === "it" ? forme(voce(c.code), countryName(c)) : formeEn(voceEn(c.code), countryName(c))));
+  names = nameForms.map((f) => f.nome);
+}
+
+/** Nome dell'ideologia (lettera delle regole) e della regione (indice) nella lingua scelta. */
+const ideologyName = (letter: string): string =>
+  (testi.ideologie as Record<string, string>)[letter] ?? classicRules.ideologies.find((x) => x.letter === letter)?.name ?? testi.nd;
+const regionName = (r: { id: number; name: string }): string => testi.regioni[r.id] ?? r.name;
+
 const money = (x: number | null): string => {
   if (x === null) return testi.nd;
-  if (x >= 1e12) return `${dec.format(x / 1e12)} T$`;
-  if (x >= 1e9) return `${dec.format(x / 1e9)} G$`;
-  if (x >= 1e6) return `${dec.format(x / 1e6)} M$`;
-  return `${num.format(x)} $`;
+  const [t, g, m, u] = testi.unitaSoldi;
+  if (x >= 1e12) return `${dec.format(x / 1e12)} ${t}`;
+  if (x >= 1e9) return `${dec.format(x / 1e9)} ${g}`;
+  if (x >= 1e6) return `${dec.format(x / 1e6)} ${m}`;
+  return `${num.format(x)} ${u}`;
 };
 const pct = (x: number) => `${dec.format(x * 100)}%`;
 
@@ -279,8 +336,7 @@ async function preparePack(year: number): Promise<ScenarioPack> {
   const res = await fetch(`${import.meta.env.BASE_URL}scenarios/${year}.json`);
   if (!res.ok) throw new Error(String(res.status));
   const p = (await res.json()) as ScenarioPack;
-  nameForms = p.countries.map((c) => forme(voce(c.code), italianName(c)));
-  names = nameForms.map((f) => f.nome);
+  computeNames(p);
   if (!carta) await loadMap();
   if (!Object.keys(portraits).length) await loadPortraits();
   owners = carta ? tileOwners(carta.tiles, p.countries.map((c) => c.code), p.lineage ?? [], year) : [];
@@ -392,7 +448,8 @@ function renderTitle(): void {
   const center = (t: string, color: number) => { font.draw(fb, t, area.x + (area.w - 8 * t.length) / 2, y, color); y += CELL_H; };
   center(testi.titolo, theme.textHighlight);
   center(testi.sottotitoloGioco, theme.textDim);
-  y += 14;
+  center(testi.lingua, theme.textDim);
+  y += 6;
   const rows: [string, string][] = [
     [testi.voceAnno, `◄ ${setup.year} ►`],
     [testi.voceSeme, `◄ ${setup.seed} ►`],
@@ -434,6 +491,10 @@ function titleKey(key: string): boolean {
   else if (key === "ArrowUp") title = Math.max(0, title - 1);
   else if (key === "r" || key === "R") {
     setup = { ...setup, seed: randomSeed() };
+    ui("clic");
+  }
+  else if (key === "l" || key === "L") {
+    setLingua(lingua === "it" ? "en" : "it");
     ui("clic");
   }
   else if (step && title === 0) setup = { ...setup, year: Math.min(2026, Math.max(1990, setup.year + step)) };
@@ -1041,7 +1102,7 @@ function renderMap(): void {
     const at = (k: number) => card.y + 2 + k * CELL_H;
     font.draw(fb, names[idx]!.toUpperCase(), card.x + 4, at(0), theme.textHighlight);
     // il nome dell'ideologia sta nella larghezza della scheda, con i puntini se è troppo lungo
-    const ideology = classicRules.ideologies.find((x) => x.letter === c.ideology)?.name ?? testi.nd;
+    const ideology = ideologyName(c.ideology);
     const cols = Math.floor((card.w - 8) / 8);
     font.draw(fb, ideology.length > cols ? `${ideology.slice(0, cols - 1)}…` : ideology, card.x + 4, at(1), theme.text);
     const pair = (k: number, label: string, value: string) => {
@@ -1092,9 +1153,10 @@ function renderList(): void {
     line(testi.spesaMilitare, money(c.milSpend));
     line(testi.truppe, num.format(c.troops));
     line(testi.influenza, `${dec.format(c.influence)}%`);
-    line(testi.ideologia, classicRules.ideologies.find((x) => x.letter === c.ideology)?.name ?? testi.nd);
+    line(testi.ideologia, ideologyName(c.ideology));
     line(testi.paceEticaAmbizione, `${dec.format(c.peace)} / ${dec.format(c.ethic)} / ${dec.format(c.ambition)}`);
-    line(testi.regione, sim.world.regions.find((r) => r.members.some((m) => m.core && m.country === idx))?.name ?? testi.nessuna);
+    const region = sim.world.regions.find((r) => r.members.some((m) => m.core && m.country === idx));
+    line(testi.regione, region ? regionName(region) : testi.nessuna);
     line(testi.squadra, !c.team ? testi.nessuna
       : fill(sim.world.teamLeaders.includes(idx) ? testi.guidaSquadra : testi.membroSquadra, { n: String(c.team) }));
     if (c.warheads) line(testi.testate, num.format(c.warheads));

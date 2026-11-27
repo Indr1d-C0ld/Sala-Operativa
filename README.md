@@ -1,13 +1,15 @@
 # Sala Operativa
 
+*[English version](README.en.md)*
+
 
 **Una simulazione geopolitica in pixel-art, dal 1990 al 2026.** Sei il presidente degli Stati Uniti: governi un mondo di oltre duecento paesi costruito sui dati reali del CIA World Factbook, fra diplomazia, operazioni coperte, guerre, bilancio federale, elezioni e crisi nucleari. Ogni partita parte dall'anno che scegli e può restare fedele alla storia o deviare verso un mondo alternativo.
 
-Il gioco è **interamente in italiano** ed è ispirato a *Shadow President* (D.C. True, 1993). Di quel gioco riprende il modello di simulazione, ricostruito con il reverse engineering per studio. Nome, grafica, suoni e testi sono originali, e del gioco originale non viene distribuito nulla.
+Il gioco è **in italiano e in inglese** ed è ispirato a *Shadow President* (D.C. True, 1993). Di quel gioco riprende il modello di simulazione, ricostruito con il reverse engineering per studio. Nome, grafica, suoni e testi sono originali, e del gioco originale non viene distribuito nulla.
 
 ![La mappa politica del 1990](docs/immagini/mappa-1990.png)
 
-> Prototipo giocabile nel browser, schermo 640×480 a 256 colori in stile SVGA anni '90. Licenza [GPL-3.0](LICENSE).
+> Prototipo giocabile nel browser, schermo 640×480 a 256 colori in stile SVGA anni '90: si gioca anche online su https://timrouter.dns.army/sala-operativa/. Licenza [GPL-3.0](LICENSE).
 
 ## Immagini
 
@@ -57,8 +59,9 @@ Il gioco è **interamente in italiano** ed è ispirato a *Shadow President* (D.C
 | **M** / **U** | musica / effetti sonori |
 | **F5** / **F9** | salva / carica la partita |
 | **Esc** | torna al menu iniziale |
+| **L** (schermata iniziale) | italiano o inglese; anche con `?lang=it` o `?lang=en` nell'indirizzo |
 
-Quando arriva un allarme, una proposta o la resa, il tempo si ferma finché non scegli.
+Quando arriva un allarme, una proposta o la resa, il tempo si ferma finché non scegli. La prima volta il gioco parla italiano se il browser è in italiano, altrimenti inglese; la scelta fatta con L resta nel browser, e la partita salvata continua in tutte e due le lingue.
 
 ## Avvio rapido
 
@@ -99,7 +102,7 @@ npm run typecheck
 | `packages/core` | la simulazione, pura e deterministica: mondo, sistemi (economia, influenza, alleanze, azioni, IA, guerra, nucleare, disordini, disastri, bilancio, mandato, consiglieri), salvataggi; oltre 150 test |
 | `packages/data` | le regole: profilo "classico" ricavato dall'originale e regole di generazione del mondo |
 | `packages/ui` | lo schermo 640×480 a palette: framebuffer, dithering, font bitmap, finestre, carta |
-| `packages/app` | il gioco nel browser: schermate, testi italiani (`src/testi/it.json`), audio, mappa, ritratti, scenari |
+| `packages/app` | il gioco nel browser: schermate, testi italiani e inglesi (`src/testi/it.json`, `src/testi/en.json`, nomi dei paesi in `paesi.json` e `paesi.en.json`), audio, mappa, ritratti, scenari |
 | `data/` | `worldbook.sqlite`: il CIA World Factbook 1990–2026 normalizzato ([data/README.md](data/README.md)) |
 | `tools/` | strumenti Python: costruzione del database, esportazione degli scenari, carta, rilievo, ritratti, audio, reverse engineering |
 | `docs/` | [MODELLO.md](docs/MODELLO.md) (il modello di simulazione), [MOTORE.md](docs/MOTORE.md) (motore e architettura), [STATO.md](docs/STATO.md) (diario dei lavori) |
