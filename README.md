@@ -2,6 +2,7 @@
 
 *[English version](README.en.md)*
 
+> **In English.** *Sala Operativa* ("the situation room") is a pixel-art geopolitical simulation set between 1990 and 2026. You are the President of the United States in a world of more than two hundred countries built from the real CIA World Factbook: diplomacy, covert operations, wars, the federal budget, elections and nuclear crises, on a 640×480 screen in the style of 1990s SVGA games. It runs in the browser, in English or Italian: [play online](https://timrouter.dns.army/sala-operativa/?lang=en) (press **L** on the start screen to switch language) or read the full [English README](README.en.md).
 
 **Una simulazione geopolitica in pixel-art, dal 1990 al 2026.** Sei il presidente degli Stati Uniti: governi un mondo di oltre duecento paesi costruito sui dati reali del CIA World Factbook, fra diplomazia, operazioni coperte, guerre, bilancio federale, elezioni e crisi nucleari. Ogni partita parte dall'anno che scegli e può restare fedele alla storia o deviare verso un mondo alternativo.
 

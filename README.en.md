@@ -10,6 +10,19 @@ The game is in **English and Italian** and is inspired by *Shadow President* (D.
 
 > Playable prototype in the browser, a 640×480, 256-color screen in the style of 1990s SVGA. Play online at https://timrouter.dns.army/sala-operativa/ (add `?lang=en` for English). License: [GPL-3.0](LICENSE).
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Start screen](docs/immagini/en/titolo.png) | ![World map with the latest news](docs/immagini/en/mappa.png) |
+| **New game**: starting year, world seed, historical drift, elections and disasters; L switches language | **The situation room**: political map by ideology and news from the world |
+| ![Region view](docs/immagini/en/regione.png) | ![Cabinet meeting](docs/immagini/en/gabinetto.png) |
+| **Region view**: the zoomed pixel-art relief of Europe, with Germany selected | **Cabinet meeting**: the advisors' opinions before sending a peace envoy to Moscow |
+
+![A diplomatic proposal](docs/immagini/en/proposta.png)
+
+*A diplomatic proposal from the Soviet Union: time stops until you accept or refuse.*
+
 ## What's in the game
 
 - **The real world, year by year**: all 37 editions of the CIA World Factbook, 1990–2026, including the states that disappeared (USSR, Yugoslavia, Czechoslovakia, the two Germanys, the two Yemens).
